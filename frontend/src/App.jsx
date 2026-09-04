@@ -4,6 +4,7 @@ import PlaceholderPage from './components/PlaceholderPage'
 import Landing from './components/Landing'
 import Layout from './components/Layout'
 import Login from './components/Login'
+import LoginWork from './components/LoginWork'
 import Registration from './components/Registration'
 import { AuthProvider } from './contexts/AuthContext'
 
@@ -15,7 +16,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/registration" element={<Registration />} />
-      <Route path="/loginWork" element={<PlaceholderPage title={t('routes.loginWork')} />} />
+      <Route path="/loginWork" element={<LoginWork />} />
       <Route
         element={
           <AuthProvider>
