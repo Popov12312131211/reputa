@@ -170,6 +170,7 @@ export default function Registration() {
               type="text"
               id="fullName"
               name="fullName"
+              placeholder={t('registration.fullNamePlaceholder')}
               required
               value={values.fullName}
               onChange={(e) => setField('fullName', e.target.value)}
@@ -215,6 +216,7 @@ export default function Registration() {
               type="text"
               id="login"
               name="login"
+              placeholder={t('registration.loginPlaceholder')}
               required
               value={values.login}
               onChange={(e) => setField('login', e.target.value)}
@@ -309,7 +311,7 @@ export default function Registration() {
               inputMode="numeric"
               required
               value={values.phone}
-              onChange={(e) => setField('phone', e.target.value)}
+              onChange={(e) => setField('phone', formatPhone(e.target.value))}
               onKeyDown={(e) => {
                 if ([8, 46, 37, 38, 39, 40, 9].includes(e.keyCode)) return
                 if (e.ctrlKey || e.metaKey) return
