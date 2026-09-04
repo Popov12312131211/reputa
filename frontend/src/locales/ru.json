@@ -1,0 +1,16 @@
+{
+  "ru": {
+    "routes": {
+      "home": "/",
+      "login": "/login",
+      "registration": "/registration",
+      "loginWork": "/loginWork",
+      "userSettings": "/user/settings",
+      "userMy": "/user/my",
+      "userNew": "/user/new",
+      "employeeSettings": "/employee/settings",
+      "employeeNewApplication": "/employee/newApplication",
+      "employeeApplication": "/employee/application"
+    }
+  }
+}

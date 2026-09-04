@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: reputa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: reputa
+    ports:
+      - "5432:5432"
+    volumes:
+      - reputa_pgdata:/var/lib/postgresql/data
+
+volumes:
+  reputa_pgdata:
