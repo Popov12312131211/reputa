@@ -13,6 +13,10 @@ PASSWORD_HASH_MAX_LENGTH = 255
 # Валидация пароля
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 64
+PASSWORD_REGEX_UPPERCASE = r"[A-Z]"
+PASSWORD_REGEX_LOWERCASE = r"[a-z]"
+PASSWORD_REGEX_DIGIT = r"\d"
+PASSWORD_REGEX_SPECIAL = r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?`~]"
 
 # Статусы заявки
 APPLICATION_STATUS_IN_QUEUE = "in_queue"
