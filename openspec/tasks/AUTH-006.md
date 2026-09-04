@@ -1,0 +1,125 @@
+# AUTH-006 — Страница входа для сотрудников (frontend `/loginWork/`)
+
+## Статус
+Выполнено (фронтенд). Ожидает AUTH-003 (backend).
+
+## Что сделано
+- Компонент `LoginWork.jsx` + `LoginWork.css` на базе стилей Login/Registration.
+- Три поля формы (порядок строго по ТЗ):
+  1. **Логин** — текстовый инпут, placeholder "IvanIvanov2000".
+  2. **Ваш код** — текстовый инпут для одноразового кода, placeholder "XXXXXX", `maxLength="6"`. Под полем — кнопка «Отправить код» (accent #51B38A, без underline, underline на hover). Поле расположено между логином и паролем.
+  3. **Пароль** — поле пароля с toggle видимости (eye). Под полем — ссылка «Забыли пароль?» тем же акцентным стилем.
+- Клиентская валидация: все три поля обязательны (непустые).
+- Кнопка «Войти» — основная, во всю ширину карточки.
+- Строка «Нет аккаунта? Регистрация» — «Нет аккаунта?» статичный текст, «Регистрация» кликабельная ссылка (отдельные элементы, как на Login/Registration).
+- Отправка — заглушка: при submit показывается `loginWork.serverNotReady` (TODO на AUTH-003).
+- «Отправить код» — заглушка: `handleSendCode` без логики (TODO на backend).
+- Все строки интерфейса в i18n (namespace `loginWork` в `ru.json`).
+- Маршрут `/loginWork` в `App.jsx` подключён к компоненту `LoginWork`.
+
+## Затронутые файлы
+- `frontend/src/components/LoginWork.jsx` (новый)
+- `frontend/src/components/LoginWork.css` (новый)
+- `frontend/src/locales/ru.json` (добавлен namespace `loginWork`)
+- `frontend/src/App.jsx` (импорт `LoginWork`, маршрут `/loginWork` заменил `PlaceholderPage`)
+
+## Проверка
+- `npm run build` — сборка прошла успешно.
+
+---
+
+## Эндпоинты, необходимые для подключения
+
+### 1. AUTH-003 — Вход для сотрудников
+
+**POST `/api/auth/login-work`**
+
+Описание: Аутентификация сотрудника по логину, коду с телефона и паролю.
+
+Запрос:
+```json
+{
+  "login": "string",
+  "phone_code": "string",
+  "password": "string"
+}
+```
+
+Ответ — успех (200):
+```json
+{
+  "id": 1,
+  "full_name": "Иванов Иван Иванович",
+  "role": "employee"
+}
+```
+
+Ответ — ошибка (401):
+```json
+{
+  "detail": "Неверный логин, код или пароль"
+}
+```
+
+Побочные эффекты:
+- Устанавливает httpOnly cookie `access_token` с JWT (HS256, TTL 24 ч).
+- Payload JWT: `{ "sub": "<user_id>", "role": "employee" }`.
+
+Примечания:
+- Дефолтный код для MVP: `"123456"`.
+- Если в БД нет пользователей — первый зарегистрированный автоматически получает роль `employee`.
+
+---
+
+### 2. AUTH-007 (связанный) — Проверка текущей сессии
+
+**GET `/api/auth/me`**
+
+Описание: Возвращает данные текущего пользователя по JWT из cookie. Нужен фронтенду для восстановления сессии при перезагрузке страницы.
+
+Ответ — авторизован (200):
+```json
+{
+  "id": 1,
+  "full_name": "Иванов Иван Иванович",
+  "role": "employee"
+}
+```
+
+Ответ — не авторизован (401):
+```json
+{
+  "detail": "Не авторизован"
+}
+```
+
+---
+
+## Что осталось (подключение к бэкенду)
+
+После реализации AUTH-003 в `LoginWork.jsx` необходимо:
+
+1. Заменить заглушку в `handleSubmit` на `POST /api/auth/login-work`:
+   ```js
+   const res = await fetch('/api/auth/login-work', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     credentials: 'include',
+     body: JSON.stringify({ login, phone_code: code, password })
+   })
+   ```
+
+2. Обработать ответ:
+   - **200** → сохранить данные пользователя в `AuthContext`, перенаправить на `/employee/settings`.
+   - **401** → показать сообщение «Неверный логин, код или пароль».
+   - **422** → показать ошибки валидации полей.
+
+3. Реализовать `handleSendCode` — вызов эндпоинта отправки одноразового кода (POST `/api/auth/send-code` или аналогичный).
+
+4. Обновить `AuthContext` для чтения роли из JWT (вместо URL-пути) — вызов `GET /api/auth/me` при загрузке приложения.
+
+5. Добавить `credentials: 'include'` во все fetch-запросы для передачи httpOnly cookie.
+
+## Блокеры
+- AUTH-003 (backend) — эндпоинт входа для сотрудников по логину/коду/паролю.
+- AUTH-007 — middleware проверки JWT на бэкенде + route guard на фронтенде.

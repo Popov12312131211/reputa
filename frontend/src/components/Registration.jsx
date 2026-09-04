@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import {
+  SHOW_AUTH_ILLUSTRATION,
   PASSWORD_RULES,
   PHONE_MASK,
   PHONE,
@@ -157,6 +158,7 @@ export default function Registration() {
 
   return (
     <div className="registration-page">
+      <div className="registration-page__inner">
       <div className="registration-card">
         <span className="registration-card__logo">{t('registration.logo')}</span>
 
@@ -377,6 +379,10 @@ export default function Registration() {
             {t('registration.loginLink')}
           </Link>
         </p>
+      </div>
+      {SHOW_AUTH_ILLUSTRATION && (
+        <img className="registration-page__illustration" src="/img/reg.jpg" alt="" />
+      )}
       </div>
     </div>
   )
