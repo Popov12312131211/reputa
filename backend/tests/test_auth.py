@@ -7,6 +7,7 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
 from app.main import app
 from app.db.session import get_db
@@ -15,13 +16,15 @@ from app.schemas.auth import RegisterRequest
 from app.core.constants import PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH
 
 
-def _mock_db(existing_login=None):
+def _mock_db(existing_login=None, fail_commit=False):
     class FakeDb:
         def __init__(self, existing_login):
             self._existing_login = existing_login
             self.added = []
             self.committed = False
             self.refreshed = None
+            self.rolled_back = False
+            self._fail_commit = fail_commit
 
         def query(self, model):
             self._query_model = model
@@ -49,9 +52,14 @@ def _mock_db(existing_login=None):
             self.added.append(obj)
 
         def commit(self):
+            if self._fail_commit:
+                raise IntegrityError("INSERT INTO users", {"login": "ivan"}, Exception("UNIQUE"))
             self.committed = True
             for obj in self.added:
                 obj.id = 1 if getattr(obj, "id", None) is None else obj.id
+
+        def rollback(self):
+            self.rolled_back = True
 
         def refresh(self, obj):
             self.refreshed = obj
@@ -178,6 +186,30 @@ class TestRegistrationEndpoint:
 
         resp = self.client.post("/auth/register", json=_valid_payload(login=""))
         assert resp.status_code == 422
+
+    def test_register_race_duplicate_returns_409(self):
+        db = _mock_db(existing_login=None, fail_commit=True)
+        self._set_db(db)
+
+        resp = self.client.post("/auth/register", json=_valid_payload())
+        assert resp.status_code == 409
+        assert db.rolled_back is True
+
+    def test_register_future_birth_date(self):
+        db = _mock_db(existing_login=None)
+        self._set_db(db)
+
+        resp = self.client.post("/auth/register", json=_valid_payload(birth_date="2050-01-01"))
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_register_too_old_birth_date(self):
+        db = _mock_db(existing_login=None)
+        self._set_db(db)
+
+        resp = self.client.post("/auth/register", json=_valid_payload(birth_date="1800-01-01"))
+        assert resp.status_code == 422
+        assert db.committed is False
 
 
 class TestPasswordValidation:

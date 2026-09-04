@@ -13,6 +13,7 @@ from app.core.constants import (
     TELEGRAM_MAX_LENGTH,
     PASSWORD_HASH_MAX_LENGTH,
     ROLE_USER,
+    ROLE_EMPLOYEE,
     ROLE_MAX_LENGTH,
 )
 
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
 class UserRole(str, enum.Enum):
     USER = ROLE_USER
-    EMPLOYEE = "employee"
+    EMPLOYEE = ROLE_EMPLOYEE
 
 
 class User(Base):

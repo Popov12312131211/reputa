@@ -13,8 +13,18 @@ from app.core.constants import (
     FULL_NAME_MAX_LENGTH,
     LOGIN_MAX_LENGTH,
     PHONE_MAX_LENGTH,
+    PHONE_PATTERN,
     TELEGRAM_MAX_LENGTH,
+    TELEGRAM_PREFIX,
+    USER_MAX_AGE_YEARS,
 )
+
+
+def _strip_required(v: str, empty_msg: str) -> str:
+    cleaned = v.strip()
+    if not cleaned:
+        raise ValueError(empty_msg)
+    return cleaned
 
 
 class RegisterRequest(BaseModel):
@@ -28,9 +38,7 @@ class RegisterRequest(BaseModel):
     @field_validator("full_name")
     @classmethod
     def validate_full_name(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("ФИО не может быть пустым")
+        v = _strip_required(v, "ФИО не может быть пустым")
         if len(v) > FULL_NAME_MAX_LENGTH:
             raise ValueError(f"ФИО не может превышать {FULL_NAME_MAX_LENGTH} символов")
         return v
@@ -38,11 +46,20 @@ class RegisterRequest(BaseModel):
     @field_validator("login")
     @classmethod
     def validate_login(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Логин не может быть пустым")
+        v = _strip_required(v, "Логин не может быть пустым")
         if len(v) > LOGIN_MAX_LENGTH:
             raise ValueError(f"Логин не может превышать {LOGIN_MAX_LENGTH} символов")
+        return v
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, v: date) -> date:
+        today = date.today()
+        if v > today:
+            raise ValueError("Дата рождения не может быть в будущем")
+        # Сравнение по годам вместо дней, чтобы не вводить константу дней в году
+        if v.year < today.year - USER_MAX_AGE_YEARS:
+            raise ValueError("Некорректная дата рождения")
         return v
 
     @field_validator("password")
@@ -66,17 +83,18 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_phone(cls, v: str) -> str:
         v = v.strip()
-        if not re.match(r"^\+?\d{7,15}$", v):
-            raise ValueError("Некорректный формат телефона")
+        # Дешёвая проверка длины первой, затем точный паттерн из constants
         if len(v) > PHONE_MAX_LENGTH:
             raise ValueError(f"Телефон не может превышать {PHONE_MAX_LENGTH} символов")
+        if not re.match(PHONE_PATTERN, v):
+            raise ValueError("Некорректный формат телефона")
         return v
 
     @field_validator("telegram")
     @classmethod
     def validate_telegram(cls, v: str) -> str:
         v = v.strip()
-        if not v.startswith("@"):
+        if not v.startswith(TELEGRAM_PREFIX):
             raise ValueError("Телеграм должен начинаться с @")
         if len(v) > TELEGRAM_MAX_LENGTH:
             raise ValueError(f"Телеграм не может превышать {TELEGRAM_MAX_LENGTH} символов")

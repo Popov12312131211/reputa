@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.constants import MSG_USER_ALREADY_EXISTS
 from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.auth import RegisterRequest, RegisterResponse
@@ -15,7 +17,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Пользователь с таким логином уже существует",
+            detail=MSG_USER_ALREADY_EXISTS,
         )
 
     user = User(
@@ -27,8 +29,17 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
         telegram=body.telegram,
         role=UserRole.USER.value,
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    # Гонка двух параллельных запросов с одним логином ловится здесь:
+    # pre-check выше её не видит, unique-ограничение в БД — видит.
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=MSG_USER_ALREADY_EXISTS,
+        ) from exc
 
     return user
