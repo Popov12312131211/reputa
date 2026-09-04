@@ -1,0 +1,324 @@
+@font-face {
+  font-family: "RockStar";
+  src: url("/fonts/RS-regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+:root {
+  --bg-page: #F8F7F2;
+  --card: #FFFFFF;
+  --text: #191919;
+  --text-muted: #6E7168;
+  --border: #E6E3D9;
+  --accent: #51B38A;
+  --accent-hover: #3E8F6D;
+  --accent-bg: #DFF2EA;
+  --warning: #D9A441;
+  --error: #C1584A;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: #E9E6DD;
+}
+
+body {
+  font-family: "Inter", "RockStar", Arial, sans-serif;
+  font-weight: 200;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.page {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0 auto;
+  background: var(--bg-page);
+  overflow: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: clamp(3rem, 5vw, 4rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(1.5rem, 9vw, 11rem);
+  border-radius: 1rem;
+  border: 1px solid var(--text-muted);
+  background: rgba(248, 247, 242, 0.8);
+  z-index: 10;
+  backdrop-filter: blur(1rem);
+  -webkit-backdrop-filter: blur(1rem);
+}
+
+.logo {
+  font-family: "RockStar", "Inter", sans-serif;
+  font-weight: 400;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.logo--header {
+  font-size: clamp(1rem, 1.5vw, 1.5rem);
+  line-height: 1.2;
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.link {
+  font-size: clamp(0.875rem, 1.25vw, 1.5rem);
+  line-height: 1.2;
+  color: var(--text);
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.link:hover {
+  color: var(--accent-hover);
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  flex-wrap: wrap;
+}
+
+.hero__left {
+  position: relative;
+  flex: 1 1 40%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(5rem, 10vw, 25rem) clamp(1.5rem, 5vw, 6rem);
+  border-radius: 2rem;
+  border: 1px solid var(--text-muted);
+  background: var(--bg-page);
+}
+
+.hero__title {
+  font-size: clamp(1.75rem, 3vw, 3rem);
+  line-height: 1.2;
+  font-weight: 200;
+  color: var(--text);
+  text-align: center;
+}
+
+.hero__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(14rem, 18vw, 22rem);
+  height: clamp(3rem, 5vw, 5rem);
+  margin-top: clamp(1rem, 2vw, 2rem);
+  border-radius: 2rem;
+  border: 1px solid var(--text-muted);
+  font-size: clamp(1.125rem, 1.8vw, 2.25rem);
+  line-height: 1.2;
+  color: var(--text);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.hero__button:hover {
+  color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.hero__right {
+  position: relative;
+  flex: 1 1 55%;
+  min-width: 0;
+  min-height: 50vh;
+  border-radius: 2rem;
+  border: 1px solid var(--text-muted);
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+.hero__image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* ============================================================
+   INFO / сравнение
+   ============================================================ */
+.info {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: start;
+  gap: clamp(2rem, 4vw, 4rem);
+  width: 100%;
+  padding: clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 2.5vw, 2.5rem);
+  border-radius: 2rem;
+  border: 1px solid var(--text-muted);
+  background: var(--bg-page);
+}
+
+.info__lead {
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1.2;
+  font-weight: 200;
+  color: var(--text);
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 2rem);
+  min-width: 0;
+}
+
+.col__title {
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1.2;
+  font-weight: 200;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.block .block__label {
+  margin-bottom: 0.25rem;
+  font-size: clamp(0.875rem, 1.25vw, 1.5rem);
+  line-height: 1.2;
+  color: var(--text-muted);
+}
+
+.block .block__label--nowrap {
+  white-space: nowrap;
+}
+
+.block .block__value {
+  font-size: clamp(1rem, 1.6vw, 2rem);
+  line-height: 1.2;
+  color: var(--text);
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 2vw, 2rem);
+  width: 100%;
+  padding: clamp(1rem, 2vw, 2rem) clamp(2rem, 4vw, 4rem);
+  border-radius: 2rem;
+  border: 1px solid var(--text-muted);
+  background: var(--bg-page);
+}
+
+.footer__by {
+  display: flex;
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 4rem);
+}
+
+.logo--footer {
+  font-size: clamp(1rem, 1.6vw, 2rem);
+  line-height: 1.2;
+}
+
+.footer__text {
+  font-size: clamp(1rem, 1.6vw, 2rem);
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.footer__actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.footer__link {
+  font-size: clamp(1rem, 1.6vw, 2rem);
+  line-height: 1.2;
+  color: var(--text);
+  transition: color 0.2s ease;
+}
+
+.footer__link:hover {
+  color: var(--accent-hover);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 1rem;
+  }
+
+  .hero {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .hero__left {
+    flex: none;
+    width: 100%;
+    padding: clamp(5rem, 15vw, 8rem) 1.5rem clamp(2rem, 5vw, 4rem);
+  }
+
+  .hero__right {
+    flex: none;
+    width: 100%;
+    min-height: 40vh;
+  }
+
+  .info {
+    grid-template-columns: 1fr;
+  }
+
+  .col__title {
+    white-space: normal;
+  }
+
+  .block .block__label--nowrap {
+    white-space: normal;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
