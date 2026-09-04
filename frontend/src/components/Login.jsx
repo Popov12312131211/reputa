@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { SHOW_AUTH_ILLUSTRATION } from '../constants/auth'
 import './Login.css'
 
 export default function Login() {
@@ -29,6 +30,7 @@ export default function Login() {
 
   return (
     <div className="login-page">
+      <div className="login-page__inner">
       <div className="login-card">
         <span className="login-card__logo">{t('login.logo')}</span>
 
@@ -106,6 +108,10 @@ export default function Login() {
             </Link>
           </p>
         </div>
+      </div>
+      {SHOW_AUTH_ILLUSTRATION && (
+        <img className="login-page__illustration" src="/img/login.png" alt="" />
+      )}
       </div>
     </div>
   )

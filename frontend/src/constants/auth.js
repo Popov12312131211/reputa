@@ -1,3 +1,5 @@
+export const SHOW_AUTH_ILLUSTRATION = true
+
 export const PASSWORD = {
   MIN_LENGTH: 8,
   MAX_LENGTH: 64,
