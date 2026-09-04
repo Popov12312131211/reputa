@@ -57,8 +57,10 @@
     "logo": "Reputa",
     "fullName": "ФИО",
     "fullNameHint": "Введите ФИО (минимум 3 слова)",
+    "fullNamePlaceholder": "Иванов Иван Иванович",
     "birthDate": "Дата рождения",
     "login": "Логин",
+    "loginPlaceholder": "IvanIvanov2000",
     "password": "Пароль",
     "passwordConfirm": "Повторите пароль",
     "phone": "Номер телефона",
@@ -80,5 +82,20 @@
     "haveAccount": "Уже есть аккаунт?",
     "loginLink": "Войти",
     "serverNotReady": "Регистрация временно недоступна (бэкенд AUTH-001 ещё не готов)"
+  },
+  "login": {
+    "logo": "Reputa",
+    "login": "Логин",
+    "password": "Пароль",
+    "loginPlaceholder": "IvanIvanov2000",
+    "passwordPlaceholder": "Введите пароль",
+    "submit": "Войти",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль",
+    "required": "Обязательное поле",
+    "forgotPassword": "Забыли пароль?",
+    "noAccount": "Нет аккаунта?",
+    "registerLink": "Регистрация",
+    "serverNotReady": "Вход временно недоступен (бэкенд AUTH-002 ещё не готов)"
   }
 }

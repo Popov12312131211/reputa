@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import PlaceholderPage from './components/PlaceholderPage'
 import Landing from './components/Landing'
 import Layout from './components/Layout'
+import Login from './components/Login'
 import Registration from './components/Registration'
 import { AuthProvider } from './contexts/AuthContext'
 
@@ -12,7 +13,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<PlaceholderPage title={t('routes.login')} />} />
+      <Route path="/login" element={<Login />} />
       <Route path="/registration" element={<Registration />} />
       <Route path="/loginWork" element={<PlaceholderPage title={t('routes.loginWork')} />} />
       <Route
