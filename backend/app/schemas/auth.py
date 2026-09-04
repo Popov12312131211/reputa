@@ -111,7 +111,9 @@ class RegisterResponse(BaseModel):
     role: str
 
 
-class LoginRequest(BaseModel):
+class _CredentialsBase(BaseModel):
+    """Общая валидация логина/пароля для всех эндпоинтов входа."""
+
     login: str
     password: str
 
@@ -130,6 +132,19 @@ class LoginRequest(BaseModel):
         if not v:
             raise ValueError("Пароль не может быть пустым")
         return v
+
+
+class LoginRequest(_CredentialsBase):
+    pass
+
+
+class EmployeeLoginRequest(_CredentialsBase):
+    code: str
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, v: str) -> str:
+        return _strip_required(v, "Код не может быть пустым")
 
 
 class LoginResponse(BaseModel):
