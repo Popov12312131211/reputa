@@ -52,5 +52,33 @@
     "footerLogin": "Вход",
     "footerRegistration": "Регистрация",
     "footerStaffLogin": "Вход для персонала"
+  },
+  "registration": {
+    "logo": "Reputa",
+    "fullName": "ФИО",
+    "fullNameHint": "Введите ФИО (минимум 3 слова)",
+    "birthDate": "Дата рождения",
+    "login": "Логин",
+    "password": "Пароль",
+    "passwordConfirm": "Повторите пароль",
+    "phone": "Номер телефона",
+    "telegram": "Телеграм",
+    "submit": "Регистрация",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль",
+    "required": "Обязательное поле",
+    "birthDateHint": "Введите корректную дату (18+ лет)",
+    "phoneHint": "Введите полный номер телефона",
+    "telegramHint": "Введите ник (@username)",
+    "passwordMismatch": "Пароли не совпадают",
+    "passwordRules": {
+      "length": "От 8 до 64 символов",
+      "case": "Включает латинские строчные и заглавные буквы",
+      "digit": "Включает цифры",
+      "special": "Включает спецсимволы (!@#$_)"
+    },
+    "haveAccount": "Уже есть аккаунт?",
+    "loginLink": "Войти",
+    "serverNotReady": "Регистрация временно недоступна (бэкенд AUTH-001 ещё не готов)"
   }
 }
