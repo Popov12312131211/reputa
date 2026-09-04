@@ -67,8 +67,8 @@ export default function Landing() {
         <div className="col col--with">
           <h3 className="col__title">{t('landing.colWithTitle')}</h3>
           <div className="block">
-            <p className="block__label">{t('landing.blockRiskLabel')}</p>
-            <p className="block__value">{t('landing.blockRiskValue')}</p>
+            <p className="block__label">{t('landing.blockObjectiveLabel')}</p>
+            <p className="block__value">{t('landing.blockObjectiveValue')}</p>
           </div>
           <div className="block">
             <p className="block__label">{t('landing.blockSourcesLabel')}</p>

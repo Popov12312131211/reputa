@@ -180,9 +180,9 @@ a {
    INFO / сравнение
    ============================================================ */
 .info {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: start;
   gap: clamp(2rem, 4vw, 4rem);
   width: 100%;
   padding: clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 2.5vw, 2.5rem);
@@ -192,7 +192,6 @@ a {
 }
 
 .info__lead {
-  flex: 1 1 100%;
   font-size: clamp(2rem, 4vw, 4rem);
   line-height: 1.2;
   font-weight: 200;
@@ -203,7 +202,6 @@ a {
   display: flex;
   flex-direction: column;
   gap: clamp(1rem, 2vw, 2rem);
-  flex: 1 1 280px;
   min-width: 0;
 }
 
@@ -308,11 +306,7 @@ a {
   }
 
   .info {
-    flex-direction: column;
-  }
-
-  .col {
-    flex: 1 1 100%;
+    grid-template-columns: 1fr;
   }
 
   .col__title {
