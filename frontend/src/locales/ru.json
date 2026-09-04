@@ -11,6 +11,46 @@
       "employeeSettings": "/employee/settings",
       "employeeNewApplication": "/employee/newApplication",
       "employeeApplication": "/employee/application"
+    },
+    "sidebar": {
+      "settings": "Настройки",
+      "myApplications": "Мои заявки",
+      "newApplication": "Создать заявку",
+      "actualApplications": "Актуальные заявки",
+      "allApplications": "Все заявки"
+    },
+    "landing": {
+      "logo": "Reputa",
+      "login": "Войти",
+      "registration": "Регистрация",
+      "heroTitleLine1": "Кредитный рейтинг",
+      "heroTitleLine2": "для нового поколения",
+      "heroButton": "Попробовать",
+      "heroImageAlt": "Reputa сервис",
+      "infoLeadLine1": "Почему банкам",
+      "infoLeadLine2": "сложно сказать",
+      "infoLeadLine3": "вам «да»",
+      "colNowTitle": "Как сейчас:",
+      "colWithTitle": "С нашим сервисом",
+      "blockRiskLabel": "Кто попадает в \"группу риска\"",
+      "blockRiskValue": "Студенты, самозанятые, фрилансеры",
+      "blockSourcesLabel": "Источники данных",
+      "blockSourcesNowValue": "Только справка о доходах и БКИ*",
+      "blockSourcesWithValue": "Выписка с карты за 3 месяца",
+      "blockIncomeLabel": "Стабильный доход без официального оформления",
+      "blockIncomeNowValue": "Не учитывается",
+      "blockIncomeWithValue": "Учитывается через реальные поступления",
+      "blockFinanceLabel": "Финансовая дисциплина в быту",
+      "blockFinanceNowValue": "Не оценивается",
+      "blockFinanceWithValue": "Оценивается по остаткам и структуре трат",
+      "blockResultLabel": "Итог для \"невидимых\" клиентов",
+      "blockResultNowValue": "Отказ или блокирующе низкий лимит",
+      "blockResultWithValue": "Прозрачная оценка от 0 до 100",
+      "footerYear": "2026",
+      "footerBy": "by room #19",
+      "footerLogin": "Вход",
+      "footerRegistration": "Регистрация",
+      "footerStaffLogin": "Вход для персонала"
     }
   }
 }

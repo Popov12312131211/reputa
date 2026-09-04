@@ -1,1 +1,48 @@
 frontend-temp
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+venv/
+
+# === Environment / Secrets ===
+.env
+.env.local
+.env.*.local
+
+# === Node (root-level, frontend has its own) ===
+node_modules/
+
+# === Build / Cache ===
+dist/
+build/
+.cache/
+
+# === IDE ===
+.vscode/
+.idea/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Logs / Temp ===
+*.log
+*.bak
+*.tmp
+*.swp
+
+# === Sensitive data (на случай отладочных сохранений) ===
+*.sql
+*.dump
+*.key
+*.pem
+*.p12
+*.pfx
