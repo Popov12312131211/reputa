@@ -97,5 +97,23 @@
     "noAccount": "Нет аккаунта?",
     "registerLink": "Регистрация",
     "serverNotReady": "Вход временно недоступен (бэкенд AUTH-002 ещё не готов)"
+  },
+  "loginWork": {
+    "logo": "Reputa",
+    "login": "Логин",
+    "code": "Ваш код",
+    "codePlaceholder": "XXXXXX",
+    "password": "Пароль",
+    "loginPlaceholder": "IvanIvanov2000",
+    "passwordPlaceholder": "Введите пароль",
+    "submit": "Войти",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль",
+    "required": "Обязательное поле",
+    "sendCode": "Отправить код",
+    "forgotPassword": "Забыли пароль?",
+    "noAccount": "Нет аккаунта?",
+    "registerLink": "Регистрация",
+    "serverNotReady": "Вход временно недоступен (бэкенд AUTH-002 ещё не готов)"
   }
 }
