@@ -164,6 +164,17 @@
     "filterRejected": "Отклонено",
     "serverNotReady": "Список заявок временно недоступен (бэкенд не реализован)"
   },
+  "userMyDetail": {
+    "title": "Заявка",
+    "request": "Запрос",
+    "creditPurpose": "Цель кредита",
+    "finalScore": "Итоговая оценка",
+    "close": "Закрыть",
+    "notFound": "Заявка не найдена",
+    "loading": "Загрузка…"
+  },
+  "scoreGauge": {
+    "title": "Благонадёжность (0–100)"
   "employeeSettings": {
     "title": "Настройки",
     "automation": "Автоматизация",

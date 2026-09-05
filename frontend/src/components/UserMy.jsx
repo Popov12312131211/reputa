@@ -1,19 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Clock, Check, X, Filter } from 'lucide-react'
 import { getJSON } from '../api'
 import { APPLICATION_STATUS, STATUS_GROUP } from '../constants/application'
+import ScoreGauge from './ScoreGauge'
 import './UserMy.css'
 
-// Заглушка: бэкенд-эндпоинт заявок пользователя (APP-002+) ещё не реализован.
-// Используем мок с имитацией задержки сети, чтобы не ломать вёрстку.
-// TODO: заменить на реальный GET /api/applications/my (или /api/user/applications) после реализации APP-002.
+// ВРЕМЕННЫЕ ЗАГЛУШКИ до реального подключения API карточки (эндпоинт списка
+// заявок пользователя и передача full_name/цели с бэкенда — СЛЕДУЮЩИЙ ШАГ,
+// отдельной задачей, здесь не реализуется). Значения констант — договорённые
+// плейсхолдеры формы, чтобы карточка не показывала пустые/сломанные поля.
+const FIO_STUB = 'Иванов Иван Иванович'
+const PURPOSE_STUB = 'На покупку нового ПК'
+const SCORE_STUB = 72
+
+// Заглушка: бэкенд-эндпоинт заявок пользователя (APP-002+/APP-004 backend)
+// ещё не реализован — используем мок с имитацией данных, чтобы не ломать
+// вёрстку. Поля full_name/purpose/score ниже — те же временные заглушки.
+// TODO: заменить на реальный GET /api/user/applications после реализации APP-004.
 const MOCK_APPLICATIONS = [
-  { id: '123DE456', amount: 25000, score: 72, status: APPLICATION_STATUS.AUTO_APPROVED, createdAt: '2026-09-01T10:15:00.000Z' },
-  { id: '123DE457', amount: 150000, score: 34, status: APPLICATION_STATUS.EMPLOYEE_REJECTED, createdAt: '2026-08-28T14:40:00.000Z' },
-  { id: '123DE458', amount: 5000, score: null, status: APPLICATION_STATUS.IN_QUEUE, createdAt: '2026-09-04T09:05:00.000Z' },
-  { id: '123DE459', amount: 120000, score: 88, status: APPLICATION_STATUS.EMPLOYEE_APPROVED, createdAt: '2026-08-30T18:22:00.000Z' },
+  { id: '123DE456', amount: 25000, purpose: PURPOSE_STUB, full_name: FIO_STUB, score: SCORE_STUB, status: APPLICATION_STATUS.AUTO_APPROVED, createdAt: '2026-09-01T10:15:00.000Z' },
+  { id: '123DE457', amount: 150000, purpose: PURPOSE_STUB, full_name: FIO_STUB, score: 34, status: APPLICATION_STATUS.EMPLOYEE_REJECTED, createdAt: '2026-08-28T14:40:00.000Z' },
+  { id: '123DE458', amount: 5000, purpose: PURPOSE_STUB, full_name: FIO_STUB, score: null, status: APPLICATION_STATUS.IN_QUEUE, createdAt: '2026-09-04T09:05:00.000Z' },
+  { id: '123DE459', amount: 120000, purpose: PURPOSE_STUB, full_name: FIO_STUB, score: 88, status: APPLICATION_STATUS.EMPLOYEE_APPROVED, createdAt: '2026-08-30T18:22:00.000Z' },
 ]
 
 const STATUS_ICON = {
@@ -50,6 +60,19 @@ function formatDate(value) {
   }).format(date)
 }
 
+// Бейдж статуса: та же иконография/цвета, что в таблице /user/my (APP-004).
+function StatusBadge({ status, title }) {
+  const Icon = STATUS_ICON[status] || Clock
+  return (
+    <span
+      className={`usermy-status usermy-status--${STATUS_GROUP[status] || 'pending'}`}
+      title={title}
+    >
+      <Icon size={16} strokeWidth={1.5} />
+    </span>
+  )
+}
+
 function SortButton({ label, dir, active, ariaLabel, onSort }) {
   return (
     <button
@@ -68,15 +91,27 @@ function SortButton({ label, dir, active, ariaLabel, onSort }) {
 
 export default function UserMy() {
   const { t } = useTranslation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [applications, setApplications] = useState(null)
   const [filter, setFilter] = useState('all')
   const [filterOpen, setFilterOpen] = useState(false)
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' })
+  const [detail, setDetail] = useState(null)
+
+  const menuId = searchParams.get('menu')
 
   function handleSort(key) {
     setSort((prev) =>
       prev.key === key ? { key, dir: prev.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'asc' }
     )
+  }
+
+  function openDetail(app) {
+    setSearchParams({ menu: String(app.id) })
+  }
+
+  function closeDetail() {
+    setSearchParams({})
   }
 
   useEffect(() => {
@@ -90,6 +125,57 @@ export default function UserMy() {
       cancelled = true
     }
   }, [])
+
+  // APP-005: детальная карточка открывается по ?menu={id}. Данные берём с
+  // бэкенда (эндпоинт проверяет принадлежность заявки текущему пользователю),
+  // при недоступности/404 подставляем строку из уже загруженного списка — так
+  // карточка не ломается, пока список заявок работает на мок-данных (APP-002).
+  useEffect(() => {
+    if (menuId == null) {
+      setDetail(null)
+      return
+    }
+    let cancelled = false
+    setDetail({ status: 'loading' })
+    getJSON(`/api/user/applications/${menuId}`).then((res) => {
+      if (cancelled) return
+      if (res.ok) {
+        setDetail({ status: 'ready', data: res.data })
+        return
+      }
+      const local = (applications || []).find((a) => String(a.id) === String(menuId))
+      if (local) {
+        // Заглушка: подставляем строку списка; её поля full_name/purpose/score
+        // заполнены плейсхолдерами (FIO_STUB/PURPOSE_STUB), поэтому в карточке
+        // нет пустых полей. Не берём ФИО из контекста авторизации (там реальные
+        // данные пользователя, а не заёмщика карточки).
+        setDetail({
+          status: 'ready',
+          data: { ...local, full_name: local.full_name || FIO_STUB, purpose: local.purpose || PURPOSE_STUB },
+        })
+      } else {
+        setDetail({ status: 'error' })
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [menuId, applications])
+
+  // Закрытие по Escape и блокировка прокрутки страницы под модальным окном.
+  useEffect(() => {
+    if (menuId == null) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeDetail()
+    }
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menuId])
 
   const filtered = useMemo(() => {
     let list = applications || []
@@ -121,6 +207,8 @@ export default function UserMy() {
     })
     return sorted
   }, [applications, filter, sort])
+
+  const detailApp = detail && detail.status === 'ready' ? detail.data : null
 
   return (
     <div className="usermy-page">
@@ -211,38 +299,111 @@ export default function UserMy() {
                   </div>
                 </div>
 
-                {filtered.map((app) => {
-                  const Icon = STATUS_ICON[app.status] || Clock
-                  return (
-                    <div className="usermy-table__row" role="row" key={app.id}>
-                      <div className="usermy-table__cell usermy-table__cell--id" role="cell">
-                        {app.id}
-                      </div>
-                      <div className="usermy-table__cell" role="cell">
-                        <span
-                          className={`usermy-status usermy-status--${STATUS_GROUP[app.status] || 'pending'}`}
-                          title={t(`userMy.filter${STATUS_GROUP[app.status] ? STATUS_GROUP[app.status].charAt(0).toUpperCase() + STATUS_GROUP[app.status].slice(1) : 'Pending'}`)}
-                        >
-                          <Icon size={16} strokeWidth={1.5} />
-                        </span>
-                      </div>
-                      <div className="usermy-table__cell usermy-table__cell--amount" role="cell">
-                        {formatAmount(app.amount)} ₽
-                      </div>
-                      <div className="usermy-table__cell usermy-table__cell--date" role="cell">
-                        {formatDate(app.createdAt)}
-                      </div>
-                      <div className="usermy-table__cell usermy-table__cell--score" role="cell">
-                        {app.score != null ? app.score : '—'}
-                      </div>
+                {filtered.map((app) => (
+                  <div
+                    className="usermy-table__row"
+                    role="row"
+                    key={app.id}
+                    tabIndex={0}
+                    aria-label={String(app.id)}
+                    onClick={() => openDetail(app)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        openDetail(app)
+                      }
+                    }}
+                  >
+                    <div className="usermy-table__cell usermy-table__cell--id" role="cell">
+                      {app.id}
                     </div>
-                  )
-                })}
+                    <div className="usermy-table__cell" role="cell">
+                      <StatusBadge
+                        status={app.status}
+                        title={t(
+                          `userMy.filter${STATUS_GROUP[app.status] ? STATUS_GROUP[app.status].charAt(0).toUpperCase() + STATUS_GROUP[app.status].slice(1) : 'Pending'}`
+                        )}
+                      />
+                    </div>
+                    <div className="usermy-table__cell usermy-table__cell--amount" role="cell">
+                      {formatAmount(app.amount)} ₽
+                    </div>
+                    <div className="usermy-table__cell usermy-table__cell--date" role="cell">
+                      {formatDate(app.createdAt)}
+                    </div>
+                    <div className="usermy-table__cell usermy-table__cell--score" role="cell">
+                      {app.score != null ? app.score : '—'}
+                    </div>
+                  </div>
+                ))}
               </div>
             </>
           )}
         </div>
       </div>
+
+      {/* APP-005: детальная карточка заявки — модальное окно поверх списка */}
+      {menuId != null && (
+        <div className="usermy-modal" onClick={closeDetail}>
+          <div
+            className="usermy-modal__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="usermy-detail-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {detail && detail.status === 'loading' && (
+              <div className="usermy-detail__message">{t('userMyDetail.loading')}</div>
+            )}
+            {detail && detail.status === 'error' && (
+              <div className="usermy-detail__message">{t('userMyDetail.notFound')}</div>
+            )}
+            {detailApp && (
+              <>
+                <div className="usermy-detail__header">
+                  <div className="usermy-detail__header-main">
+                    <StatusBadge status={detailApp.status} />
+                    <div className="usermy-detail__header-text" id="usermy-detail-title">
+                      <div className="usermy-detail__id">{detailApp.id}</div>
+                      <div className="usermy-detail__fio">{detailApp.full_name}</div>
+                    </div>
+                  </div>
+                  <div className="usermy-detail__request">
+                    <span className="usermy-detail__request-label">{t('userMyDetail.request')}:</span>
+                    <span className="usermy-detail__request-amount">
+                      {formatAmount(detailApp.amount)} ₽
+                    </span>
+                  </div>
+                  <button
+                    className="usermy-detail__close"
+                    type="button"
+                    aria-label={t('userMyDetail.close')}
+                    onClick={closeDetail}
+                  >
+                    <X size={18} strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <div className="usermy-detail__block">
+                  <h2 className="usermy-detail__block-title">{t('userMyDetail.creditPurpose')}</h2>
+                  <textarea
+                    className="usermy-detail__purpose"
+                    readOnly
+                    value={detailApp.purpose}
+                  />
+                </div>
+
+                <div className="usermy-detail__block">
+                  <h2 className="usermy-detail__block-title">{t('userMyDetail.finalScore')}</h2>
+                  <div className="usermy-detail__score">
+                    <ScoreGauge value={detailApp.score} />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
