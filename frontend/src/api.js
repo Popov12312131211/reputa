@@ -41,3 +41,42 @@ export async function postJSON(url, body) {
   }
   return { ok: true, data }
 }
+
+// Извлекает текст ошибки из ответа: быстрые коды приходят строкой в detail
+// (401/403/409), ошибки валидации (422) — массивом объектов с полем msg,
+// их склеиваем в одну строку для показа.
+function extractError(data) {
+  const detail = data && data.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((item) => {
+        const msg = item && typeof item.msg === 'string' ? item.msg : ''
+        return msg.replace(/^Value error,\s*/, '')
+      })
+      .filter(Boolean)
+    return msgs.length > 0 ? msgs.join('; ') : null
+  }
+  return null
+}
+
+export async function putJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  })
+
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    // не-JSON ответ — расцениваем как обычную сетевую ошибку ниже
+  }
+
+  if (!res.ok) {
+    return { ok: false, error: extractError(data) }
+  }
+  return { ok: true, data }
+}
