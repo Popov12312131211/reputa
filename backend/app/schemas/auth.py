@@ -114,6 +114,7 @@ class RegisterResponse(BaseModel):
 class MeResponse(BaseModel):
     id: int
     full_name: str
+    role: str
       
       
 class _CredentialsBase(BaseModel):

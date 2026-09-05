@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { postJSON } from '../api'
 import {
   SHOW_AUTH_ILLUSTRATION,
   PASSWORD_RULES,
@@ -74,6 +75,7 @@ function formatDate(value) {
 
 export default function Registration() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
 
   const [values, setValues] = useState({
     fullName: '',
@@ -127,7 +129,7 @@ export default function Registration() {
     validateField('phone') &&
     validateField('telegram')
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     const allTouched = Object.keys(values).reduce((acc, key) => {
       acc[key] = true
@@ -138,8 +140,25 @@ export default function Registration() {
     if (!formValid) return
 
     setServerError('')
-    // TODO: отправка на AUTH-001 (backend ещё не реализован) — AUTH-004 использует заглушку.
-    setServerError(t('registration.serverNotReady'))
+
+    const [day, month, year] = values.birthDate.split('.')
+    const phoneDigits = values.phone.replace(/\D/g, '')
+
+    const result = await postJSON('/api/auth/register', {
+      full_name: values.fullName.trim(),
+      birth_date: `${year}-${month}-${day}`,
+      login: values.login.trim(),
+      password: values.password,
+      phone: `+${phoneDigits}`,
+      telegram: values.telegram.trim(),
+    })
+
+    if (!result.ok) {
+      setServerError(result.error || t('registration.error'))
+      return
+    }
+
+    navigate('/login')
   }
 
   function toggleVisible(field) {

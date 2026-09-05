@@ -6,11 +6,11 @@
 ## Что сделано
 
 ### Бэкенд
-- `services/auth.py`: добавлены `create_access_token(user_id, role)` и `decode_access_token(token)` на PyJWT (HS256, TTL из `settings.JWT_EXPIRE_MINUTES`). Используются middleware и эндпоинтом `/auth/me`; `create_access_token` будет переиспользован AUTH-002/003.
+- `services/auth.py`: добавлены `create_access_token(user)` (принимает объект `User`, в JWT кладёт `sub`=id, `role`) и `decode_access_token(token)` на PyJWT (HS256, TTL из `settings.JWT_EXPIRE_MINUTES`). Используются middleware и эндпоинтом `/auth/me`; `create_access_token` переиспользован AUTH-002/003.
 - `core/constants.py`: константы `COOKIE_NAME = "access_token"`, `MSG_NOT_AUTHENTICATED = "Не авторизован"`.
 - `main.py`: `@app.middleware("http")` — защищает префиксы `/user/` (роль `user`) и `/employee/` (роль `employee`): проверяет JWT из cookie и роль из payload, при несоответствии — 401. Работает для всех будущих эндпоинтов под этими префиксами без дополнительной wiring.
 - `routers/deps.py` (новый): dependency `get_current_user` — читает cookie, декодирует JWT, грузит пользователя из БД, отдаёт 401 при невалидном токене/отсутствии пользователя.
-- `routers/auth.py`: эндпоинт `GET /auth/me` (ответ `MeResponse`: id, full_name, role) — для восстановления сессии на фронтенде (контракт из AUTH-005/006).
+- `routers/auth.py`: эндпоинт `GET /auth/me` (ответ `MeResponse`: id, full_name, role) — для восстановления сессии на фронтенде. Поле `role` добавлено в `MeResponse` позже (см. заметку ниже).
 - `requirements.txt`: `PyJWT==2.10.1` (python-jose устаревший и неподдерживаемый — выбран поддерживаемый аналог).
 
 ### Фронтенд
@@ -47,8 +47,11 @@
 - Фронтенд-сборка не запускалась: в текущей среде не установлен Node.js (`npm`/`node` отсутствуют в PATH). Проверен только код статически.
 
 ## Что осталось
-- AUTH-002 (вход пользователя) и AUTH-003 (вход сотрудника): после их реализации фронтенд сохранит пользователя в AuthContext после логина, и защищённые страницы откроются.
-- В `Login.jsx`/`LoginWork.jsx` — заменить заглушки на реальные запросы с `credentials: 'include'` (TODO уже размечены там).
+- AUTH-002 (вход пользователя) и AUTH-003 (вход сотрудника): фронтенд после логина сохраняет пользователя в AuthContext и переходит в кабинет своей роли.
+- В `Login.jsx`/`LoginWork.jsx`/`Registration.jsx` заглушки `serverNotReady` заменены реальными запросами с `credentials: 'include'` (через общий хелпер `frontend/src/api.js`).
+
+## Заметка о контракте `/auth/me`
+- `MeResponse` не содержал поля `role`, хотя контракт (этот файл и AUTH-005/006) и фронтенд (`AuthContext`, `RequireAuth`) его требуют. Из-за этого восстановление сессии при перезагрузке давало пользователя без роли, и guard отправлял даже авторизованного на `/login`. Поле `role` добавлено в `backend/app/schemas/auth.py`; в `test_auth_007.py` хелпер `_token` приведён к актуальной сигнатуре `create_access_token(user)`.
 
 ## Блокеры
-- Для сквозной проверки (вход → доступ к приватным страницам) нужна хотя бы одна из задач AUTH-002/AUTH-003.
+- Нет. Сквозной сценарий «вход → доступ к приватным страницам» реализуем (требует поднятого backend и frontend).

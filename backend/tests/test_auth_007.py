@@ -36,7 +36,7 @@ def _make_user(user_id=1, role=UserRole.USER.value):
 
 
 def _token(user_id=1, role=UserRole.USER.value):
-    return create_access_token(user_id, role)
+    return create_access_token(_make_user(user_id=user_id, role=role))
 
 
 class TestPrivateRoutesMiddleware:

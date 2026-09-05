@@ -5,6 +5,13 @@ export const ROLES = {
   EMPLOYEE: 'employee',
 }
 
+// Домашний маршрут для каждой роли: используется и route guard'ом RequireAuth,
+// и страницами входа для редиректа после успешной аутентификации.
+export const ROLE_HOME = {
+  [ROLES.USER]: '/user/my',
+  [ROLES.EMPLOYEE]: '/employee/settings',
+}
+
 const AuthContext = createContext(null)
 
 // Сессия восстанавливается через GET /api/auth/me: бэкенд читает JWT из
@@ -41,7 +48,11 @@ export function AuthProvider({ children }) {
 
   const role = user && user.role ? user.role : null
 
-  return <AuthContext.Provider value={{ user, role, loading }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, role, loading, setUser }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {
