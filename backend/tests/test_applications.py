@@ -1,0 +1,323 @@
+import os
+
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
+from datetime import date
+from decimal import Decimal
+
+import pytest
+from fastapi.testclient import TestClient
+from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
+
+from app.main import app
+from app.api.deps import get_current_user
+from app.db.session import get_db
+from app.models.user import User, UserRole
+from app.schemas.application import ApplicationCreate
+from app.services.security import create_access_token
+from app.routers import applications as applications_module
+from app.core.constants import (
+    APPLICATION_STATUS_IN_QUEUE,
+    PURPOSE_MAX_LENGTH,
+    TELEGRAM_CHANNEL_MAX_LENGTH,
+)
+
+
+def _mock_db(fail_commit=False):
+    class FakeDb:
+        def __init__(self):
+            self.added = []
+            self.committed = False
+            self.refreshed = None
+            self.rolled_back = False
+            self._fail_commit = fail_commit
+
+        def query(self, model):
+            return self
+
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return None
+
+        def add(self, obj):
+            self.added.append(obj)
+
+        def commit(self):
+            if self._fail_commit:
+                raise IntegrityError(
+                    "INSERT INTO applications", {"id": 1}, Exception("UNIQUE")
+                )
+            self.committed = True
+            for obj in self.added:
+                if getattr(obj, "id", None) is None:
+                    obj.id = 1
+
+        def rollback(self):
+            self.rolled_back = True
+
+        def refresh(self, obj):
+            self.refreshed = obj
+
+    return FakeDb()
+
+
+def _current_user():
+    return User(
+        id=1,
+        full_name="Иван Петров",
+        birth_date=date(1995, 5, 20),
+        login="ivan",
+        password_hash="hash",
+        phone="+79990000000",
+        telegram="@ivan",
+        role=UserRole.USER.value,
+    )
+
+
+class TestCreateApplicationEndpoint:
+    def setup_method(self):
+        self.client = TestClient(app, raise_server_exceptions=False)
+        self.user = _current_user()
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def _set_db(self, db):
+        app.dependency_overrides[get_db] = lambda: db
+
+    def _set_user(self, user=None):
+        app.dependency_overrides[get_current_user] = lambda: user or self.user
+
+    def _base_data(self):
+        return {
+            "amount": "50000.00",
+            "purpose": "Ремонт квартиры",
+            "telegram": "@ivan",
+            "telegram_channel": "@ivan_channel",
+        }
+
+    def _post(self, db, data=None, files=None):
+        payload = self._base_data()
+        if data:
+            payload.update(data)
+        if files is None:
+            files = {"statement": ("stmt.pdf", b"%PDF-1.4 fake", "application/pdf")}
+        return self.client.post("/applications", data=payload, files=files)
+
+    def test_create_application_success(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db)
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["id"] == 1
+        assert body["user_id"] == 1
+        assert body["amount"] == "50000.00"
+        assert body["purpose"] == "Ремонт квартиры"
+        assert body["telegram"] == "@ivan"
+        assert body["telegram_channel"] == "@ivan_channel"
+        assert body["status"] == APPLICATION_STATUS_IN_QUEUE
+        assert body["score"] is None
+
+        assert db.committed is True
+        assert len(db.added) == 1
+        created = db.added[0]
+        assert created.user_id == 1
+        assert created.amount == Decimal("50000.00")
+        assert created.status == APPLICATION_STATUS_IN_QUEUE
+
+    def test_create_application_strips_fields(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(
+            db,
+            data={
+                "amount": "50000.00",
+                "purpose": "  Ремонт квартиры  ",
+                "telegram": " @ivan ",
+                "telegram_channel": " @ivan_channel ",
+            },
+        )
+        assert resp.status_code == 201
+        created = db.added[0]
+        assert created.purpose == "Ремонт квартиры"
+        assert created.telegram == "@ivan"
+        assert created.telegram_channel == "@ivan_channel"
+
+    def test_create_application_missing_statement_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, files={})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_amount_zero_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"amount": "0"})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_amount_negative_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"amount": "-100"})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_purpose_blank_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"purpose": "   "})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_purpose_too_long_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"purpose": "x" * (PURPOSE_MAX_LENGTH + 1)})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_telegram_no_at_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"telegram": "ivan"})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_channel_blank_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"telegram_channel": ""})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_channel_too_long_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"telegram_channel": "@" + "c" * TELEGRAM_CHANNEL_MAX_LENGTH})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_statement_too_large_returns_413(self, monkeypatch):
+        monkeypatch.setattr(applications_module, "STATEMENT_MAX_SIZE_BYTES", 100)
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(
+            db,
+            files={"statement": ("big.pdf", b"x" * 101, "application/pdf")},
+        )
+        assert resp.status_code == 413
+        assert db.committed is False
+
+    def test_create_application_unauthenticated_returns_401(self):
+        db = _mock_db()
+        self._set_db(db)
+
+        resp = self._post(db)
+        assert resp.status_code == 401
+        assert db.committed is False
+        assert db.added == []
+
+    def test_create_application_invalid_token_returns_401(self):
+        db = _mock_db()
+        self._set_db(db)
+        self.client.cookies.set("access_token", "not-a-jwt")
+
+        resp = self._post(db)
+        assert resp.status_code == 401
+        assert db.committed is False
+
+    def test_create_application_unknown_user_returns_401(self):
+        db = _mock_db()
+        self._set_db(db)
+        self.client.cookies.set("access_token", create_access_token(999))
+
+        resp = self._post(db)
+        assert resp.status_code == 401
+        assert db.committed is False
+
+
+class TestApplicationCreateValidation:
+    def test_valid_application_create(self):
+        req = ApplicationCreate(
+            amount=Decimal("50000.00"),
+            purpose="Ремонт квартиры",
+            telegram="@ivan",
+            telegram_channel="@ivan_channel",
+        )
+        assert req.amount == Decimal("50000.00")
+        assert req.purpose == "Ремонт квартиры"
+        assert req.telegram == "@ivan"
+        assert req.telegram_channel == "@ivan_channel"
+
+    def test_amount_zero_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("0"),
+                purpose="Ремонт",
+                telegram="@ivan",
+                telegram_channel="@ivan_channel",
+            )
+
+    def test_amount_negative_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("-1"),
+                purpose="Ремонт",
+                telegram="@ivan",
+                telegram_channel="@ivan_channel",
+            )
+
+    def test_purpose_blank_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("1000"),
+                purpose="  ",
+                telegram="@ivan",
+                telegram_channel="@ivan_channel",
+            )
+
+    def test_telegram_without_at_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("1000"),
+                purpose="Ремонт",
+                telegram="ivan",
+                telegram_channel="@ivan_channel",
+            )
+
+    def test_telegram_channel_blank_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("1000"),
+                purpose="Ремонт",
+                telegram="@ivan",
+                telegram_channel="",
+            )

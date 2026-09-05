@@ -61,8 +61,19 @@ STAFF_LOGIN_CODE = "123456"
 # Валидация даты рождения: отсев будущих дат и нереалистичного возраста
 USER_MAX_AGE_YEARS = 150
 
+# Заявка: сумма строго больше нуля
+AMOUNT_MIN_VALUE = 0
+
+# Файл выписки: лимит размера до парсинга (STMT-001)
+STATEMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024
+
+# JWT: имя httpOnly cookie, в которой хранится токен
+JWT_COOKIE_NAME = "access_token"
+
 # Сообщения API (общие для роутера, чтобы не дублировать строки)
 MSG_USER_ALREADY_EXISTS = "Пользователь с таким логином уже существует"
+MSG_AUTH_REQUIRED = "Требуется авторизация"
+MSG_STATEMENT_TOO_LARGE = "Файл выписки превышает допустимый размер"
 MSG_NOT_AUTHENTICATED = "Не авторизован"
 MSG_INVALID_CREDENTIALS = "Неверный логин или пароль"
 MSG_INVALID_STAFF_CODE = "Неверный код"

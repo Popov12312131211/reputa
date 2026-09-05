@@ -8,6 +8,7 @@ alembic==1.15.2
 passlib[bcrypt]==1.7.4
 bcrypt==4.3.0
 PyJWT==2.10.1
+python-multipart==0.0.20
 
 # Тестовые зависимости
 pytest==9.1.1

@@ -10,11 +10,13 @@ from app.core.constants import (
 )
 from app.db.session import check_db_connection
 from app.routers.auth import router as auth_router
+from app.routers.applications import router as applications_router
 from app.services.auth import decode_access_token
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
 app.include_router(auth_router)
+app.include_router(applications_router)
 
 # Роли, которым разрешены приватные префиксы.
 # Guard на уровне middleware избавляет каждый будущий роутер
