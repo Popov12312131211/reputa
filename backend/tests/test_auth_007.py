@@ -16,10 +16,14 @@ class FakeDb:
     def __init__(self, existing_user=None):
         self._user = existing_user
 
-    def get(self, model, pk):
-        if self._user is not None and self._user.id == pk:
-            return self._user
-        return None
+    def query(self, model):
+        return self
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def first(self):
+        return self._user
 
 
 def _make_user(user_id=1, role=UserRole.USER.value):

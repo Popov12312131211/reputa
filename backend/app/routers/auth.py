@@ -10,9 +10,9 @@ from app.core.constants import (
     MSG_NOT_EMPLOYEE,
     STAFF_LOGIN_CODE,
 )
+from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User, UserRole
-from app.routers.deps import get_current_user
 from app.schemas.auth import (
     MeResponse,
     RegisterRequest,

@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Paperclip } from 'lucide-react'
+import { postFormData } from '../api'
 import { TELEGRAM } from '../constants/auth'
 import { AMOUNT } from '../constants/application'
 import './UserNew.css'
@@ -17,6 +19,7 @@ const REASON_PLACEHOLDER_KEYS = [
 
 export default function UserNew() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
 
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
@@ -28,6 +31,7 @@ export default function UserNew() {
   const [consent, setConsent] = useState(false)
   const [touched, setTouched] = useState({})
   const [serverError, setServerError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   // Плейсхолдер выбирается один раз при монтировании (не меняется при ре-рендерах);
   // обновляется только при новой загрузке страницы.
   const [reasonPlaceholder] = useState(() => {
@@ -42,19 +46,39 @@ export default function UserNew() {
     amountNum >= AMOUNT.MIN &&
     amountNum <= AMOUNT.MAX
   const telegramValid = telegram.trim() === '' || TELEGRAM.isValid(telegram)
-  const channelValid = channel.trim() !== '' && TELEGRAM.isValid(channel)
+  const channelValid = channel.trim() === '' || TELEGRAM.isValid(channel)
+  const reasonValid = reason.trim() !== ''
+  const fileValid = file != null
   const passwordValid = password.length > 0
-  const formValid = amountValid && telegramValid && channelValid && passwordValid && consent
+  const formValid = amountValid && telegramValid && channelValid && reasonValid && fileValid && passwordValid && consent
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    setTouched({ amount: true, reason: true, telegram: true, channel: true, password: true })
+    setTouched({ amount: true, reason: true, telegram: true, channel: true, password: true, statement: true })
 
-    if (!formValid) return
+    if (!formValid || submitting) return
 
     setServerError('')
-    // TODO: отправка на APP-002 (backend ещё не реализован) — APP-001 использует заглушку.
-    setServerError(t('userNew.serverNotReady'))
+    setSubmitting(true)
+
+    // APP-002: multipart-форма POST /api/applications (amount, purpose, telegram,
+    // telegram_channel, statement). Поле пароля остаётся клиентской проверкой —
+    // backend-эндпоинт его не принимает.
+    const formData = new FormData()
+    formData.append('amount', amount)
+    formData.append('purpose', reason)
+    formData.append('telegram', telegram)
+    formData.append('telegram_channel', channel)
+    if (file) formData.append('statement', file)
+
+    const res = await postFormData('/api/applications', formData)
+    setSubmitting(false)
+
+    if (res.ok) {
+      navigate('/user/my')
+      return
+    }
+    setServerError(res.error || t('userNew.submitError'))
   }
 
   return (
@@ -76,7 +100,7 @@ export default function UserNew() {
                 inputMode="decimal"
                 min={AMOUNT.MIN}
                 max={AMOUNT.MAX}
-                step="0.01"
+                step="1000"
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -92,7 +116,7 @@ export default function UserNew() {
                 {t('userNew.reason')}
               </label>
               <textarea
-                className="usernew-field__textarea"
+                className={`usernew-field__textarea${touched.reason && !reasonValid ? ' usernew-field__textarea--error' : ''}`}
                 id="reason"
                 name="reason"
                 rows="4"
@@ -100,6 +124,9 @@ export default function UserNew() {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
+              {touched.reason && !reasonValid && (
+                <span className="usernew-field__error">{t('userNew.required')}</span>
+              )}
             </div>
 
             <div className="usernew-row">
@@ -138,7 +165,6 @@ export default function UserNew() {
                   id="channel"
                   name="channel"
                   placeholder={t('userNew.channelPlaceholder')}
-                  required
                   value={channel}
                   onChange={(e) => setChannel(TELEGRAM.format(e.target.value))}
                   onFocus={() => {
@@ -150,11 +176,7 @@ export default function UserNew() {
                   }}
                 />
                 {touched.channel && !channelValid && (
-                  <span className="usernew-field__error">
-                    {channel.trim().length === 0
-                      ? t('userNew.required')
-                      : t('userNew.channelHint')}
-                  </span>
+                  <span className="usernew-field__error">{t('userNew.channelHint')}</span>
                 )}
               </div>
             </div>
@@ -178,6 +200,9 @@ export default function UserNew() {
                 </span>
                 <Paperclip className="usernew-file__icon" size={20} strokeWidth={1.5} />
               </label>
+              {touched.statement && !fileValid && (
+                <span className="usernew-field__error">{t('userNew.required')}</span>
+              )}
             </div>
 
             <label className="usernew-checkbox">
@@ -221,7 +246,7 @@ export default function UserNew() {
                 )}
               </div>
 
-              <button className="usernew-form__submit" type="submit" disabled={!formValid}>
+              <button className="usernew-form__submit" type="submit" disabled={!formValid || submitting}>
                 {t('userNew.submit')}
               </button>
             </div>

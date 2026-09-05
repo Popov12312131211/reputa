@@ -92,12 +92,10 @@ STMT_CATEGORY_SHOPPING = "покупки"
 STMT_CATEGORY_TRANSFERS = "переводы"
 STMT_CATEGORY_OTHER = "прочее"
 
-# JWT: имя httpOnly cookie, в которой хранится токен
-JWT_COOKIE_NAME = "access_token"
+# JWT: имя httpOnly cookie, в которой хранится токен (единое — COOKIE_NAME выше)
 
 # Сообщения API (общие для роутера, чтобы не дублировать строки)
 MSG_USER_ALREADY_EXISTS = "Пользователь с таким логином уже существует"
-MSG_AUTH_REQUIRED = "Требуется авторизация"
 MSG_STATEMENT_TOO_LARGE = "Файл выписки превышает допустимый размер"
 MSG_STATEMENT_UNPARSABLE = "Не удалось распознать выписку банка. Поддерживаются выписки Альфа-Банка, СберБанка и Озон Банка"
 MSG_NOT_AUTHENTICATED = "Не авторизован"
