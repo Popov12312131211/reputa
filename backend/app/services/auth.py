@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 from app.core.constants import PWD_SCHEME_BCRYPT
+from app.models.user import User
 
 pwd_context = CryptContext(schemes=[PWD_SCHEME_BCRYPT], deprecated="auto")
 
@@ -17,15 +18,13 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(user_id: int, role: str) -> str:
-    """Создаёт JWT для пользователя. Используется эндпоинтами входа (AUTH-002/003)."""
+def create_access_token(user: User) -> str:
     now = datetime.now(timezone.utc)
-    expire = now + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
     payload = {
-        "sub": str(user_id),
-        "role": role,
+        "sub": str(user.id),
+        "role": user.role,
         "iat": now,
-        "exp": expire,
+        "exp": now + timedelta(minutes=settings.JWT_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
