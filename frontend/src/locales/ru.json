@@ -144,5 +144,24 @@
     "submit": "Запросить",
     "required": "Обязательное поле",
     "serverNotReady": "Подача заявки временно недоступна (бэкенд APP-002 ещё не готов)"
+  },
+  "userMy": {
+    "title": "Мои заявки",
+    "colId": "ID",
+    "colStatus": "Статус",
+    "colAmount": "Сумма",
+    "colScore": "Рейтинг",
+    "colDate": "Дата",
+    "sortToggle": "Сортировка по {{column}} ({{dir}})",
+    "sortAsc": "сначала старые",
+    "sortDesc": "сначала новые",
+    "empty": "Заявок пока нет",
+    "emptyLink": "Создать заявку",
+    "filterTitle": "Фильтр по статусу",
+    "filterAll": "Все",
+    "filterPending": "В обработке",
+    "filterApproved": "Одобрено",
+    "filterRejected": "Отклонено",
+    "serverNotReady": "Список заявок временно недоступен (бэкенд не реализован)"
   }
 }
