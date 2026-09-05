@@ -15,12 +15,16 @@
 
 ### Фронтенд
 - `contexts/AuthContext.jsx`: провайдер теперь загружает сессию через `GET /api/auth/me` (с `credentials: 'include'`) и отдаёт `user`, `role` (из данных пользователя), `loading`. Роль больше не вычисляется из URL-пути.
-- `components/RequireAuth.jsx` (новый): route guard — пока идёт проверка сессии возвращает null; без пользователя → `<Navigate to="/login">`; при несовпадении роли с префиксом пути → редирект в кабинет своей роли (`/employee/settings` или `/user/my`). Иначе рендерит `Layout`.
+- `components/RequireAuth.jsx` (новый): route guard — пока идёт проверка сессии возвращает null; гости `/user/*` уходят на `/login`, гости `/employee/*` — на `/loginWork`; при несовпадении роли с префиксом пути → редирект в кабинет своей роли (`/employee/settings` или `/user/my`), неизвестная роль → `/login`. Иначе рендерит `Layout`.
 - `App.jsx`: защищённые маршруты обёрнуты в `<AuthProvider><RequireAuth /></AuthProvider>`.
 
 ### Прокси-слой (необходимо для контракта `/api/auth/me`)
 - `vite.config.js`: добавлен `rewrite`, срезающий префикс `/api`.
 - `nginx.conf`: `proxy_pass http://backend:8000/` (слеш) — `location /api/` срезает префикс.
+
+## Рефакторинг
+- Backend: общий helper 401 в `get_current_user`; middleware защищает и голые `/user`, `/employee`, но не похожие пути вроде `/userprofile`.
+- Frontend: гости `/employee/*` направляются на `/loginWork`; неизвестная роль направляется на `/login`, а не в возможный цикл редиректов.
 
 ## Затронутые файлы
 - backend/app/services/auth.py
@@ -39,7 +43,7 @@
 - openspec/TASKS.md — AUTH-007 отмечена выполненной
 
 ## Проверка
-- `python -m pytest` (backend): **41 passed** (29 существующих + 12 новых на AUTH-007).
+- `python -m pytest` (backend): **43 passed** (29 существующих + 14 на AUTH-007, включая регрессию границ приватных префиксов).
 - Фронтенд-сборка не запускалась: в текущей среде не установлен Node.js (`npm`/`node` отсутствуют в PATH). Проверен только код статически.
 
 ## Что осталось

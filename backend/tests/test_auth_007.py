@@ -59,6 +59,14 @@ class TestPrivateRoutesMiddleware:
         resp = self.client.get("/employee/settings")
         assert resp.status_code == 401
 
+    def test_bare_user_prefix_without_cookie_returns_401(self):
+        resp = self.client.get("/user")
+        assert resp.status_code == 401
+
+    def test_lookalike_user_prefix_is_not_protected(self):
+        resp = self.client.get("/userprofile")
+        assert resp.status_code == 404
+
     def test_invalid_token_returns_401(self):
         resp = self.client.get("/user/settings", cookies={"access_token": "garbage"})
         assert resp.status_code == 401

@@ -25,18 +25,26 @@ _PRIVATE_PREFIX_ROLES = {
 }
 
 
+def _required_role(path: str) -> str | None:
+    # Голые префиксы тоже считаем приватными, а похожие пути
+    # вроде /username — нет, поэтому сравниваем границу маршрута.
+    for prefix, role in _PRIVATE_PREFIX_ROLES.items():
+        if path == prefix[:-1] or path.startswith(prefix):
+            return role
+    return None
+
+
 @app.middleware("http")
 async def protect_private_routes(request: Request, call_next):
-    for prefix, required_role in _PRIVATE_PREFIX_ROLES.items():
-        if request.url.path.startswith(prefix):
-            token = request.cookies.get(COOKIE_NAME)
-            payload = decode_access_token(token) if token else None
-            if payload is None or payload.get("role") != required_role:
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"detail": MSG_NOT_AUTHENTICATED},
-                )
-            break
+    required_role = _required_role(request.url.path)
+    if required_role is not None:
+        token = request.cookies.get(COOKIE_NAME)
+        payload = decode_access_token(token) if token else None
+        if payload is None or payload.get("role") != required_role:
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": MSG_NOT_AUTHENTICATED},
+            )
     return await call_next(request)
 
 
