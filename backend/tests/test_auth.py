@@ -13,13 +13,24 @@ from app.main import app
 from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.auth import RegisterRequest
-from app.core.constants import PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH
+from app.core.constants import (
+    PASSWORD_MIN_LENGTH,
+    PASSWORD_MAX_LENGTH,
+    MSG_INVALID_CREDENTIALS,
+    MSG_INVALID_STAFF_CODE,
+    MSG_NOT_EMPLOYEE,
+    STAFF_LOGIN_CODE,
+)
+from app.services.auth import create_access_token, hash_password
 
 
-def _mock_db(existing_login=None, fail_commit=False):
+def _mock_db(existing_login=None, fail_commit=False, password_hash="x", role=UserRole.USER.value, count=1):
     class FakeDb:
         def __init__(self, existing_login):
             self._existing_login = existing_login
+            self._password_hash = password_hash
+            self._role = role
+            self._count = count
             self.added = []
             self.committed = False
             self.refreshed = None
@@ -33,6 +44,9 @@ def _mock_db(existing_login=None, fail_commit=False):
         def filter(self, *args, **kwargs):
             return self
 
+        def count(self):
+            return self._count
+
         def first(self):
             if self._existing_login is not None:
                 user = User(
@@ -40,10 +54,10 @@ def _mock_db(existing_login=None, fail_commit=False):
                     full_name="Иван",
                     birth_date=date(1995, 1, 1),
                     login=self._existing_login,
-                    password_hash="x",
+                    password_hash=self._password_hash,
                     phone="+79990000000",
                     telegram="@ivan",
-                    role=UserRole.USER.value,
+                    role=self._role,
                 )
                 return user
             return None
@@ -247,3 +261,209 @@ class TestPasswordValidation:
                 phone="+79990000000",
                 telegram="@test",
             )
+
+
+class TestLoginEndpoint:
+    PASSWORD = "Abcdef1!"
+
+    def setup_method(self):
+        self.client = TestClient(app, raise_server_exceptions=False)
+        self._db = _mock_db(
+            existing_login="ivan",
+            password_hash=hash_password(self.PASSWORD),
+        )
+        app.dependency_overrides[get_db] = lambda: self._db
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def _post(self, **overrides):
+        payload = {"login": "ivan", "password": self.PASSWORD}
+        payload.update(overrides)
+        return self.client.post("/auth/login", json=payload)
+
+    def test_login_success_sets_http_only_cookie(self):
+        resp = self._post()
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["login"] == "ivan"
+        assert body["role"] == UserRole.USER.value
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert "access_token=" in set_cookie
+        assert "HttpOnly" in set_cookie
+        token = resp.cookies.get("access_token")
+        assert token
+
+    def test_login_returns_valid_jwt(self):
+        resp = self._post()
+        token = resp.cookies.get("access_token")
+        from app.core.config import settings
+        import jwt
+
+        claims = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        assert claims["sub"] == "1"
+        assert claims["role"] == UserRole.USER.value
+
+    def test_login_trims_login_like_registration(self):
+        resp = self._post(login="  ivan  ")
+        assert resp.status_code == 200
+
+    def test_login_wrong_password(self):
+        resp = self._post(password="WrongPass1!")
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == MSG_INVALID_CREDENTIALS
+        assert "access_token" not in resp.cookies
+
+    def test_login_unknown_login(self):
+        db = _mock_db(existing_login=None)
+        app.dependency_overrides[get_db] = lambda: db
+        resp = self._post(login="nobody")
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == MSG_INVALID_CREDENTIALS
+
+    def test_login_empty_login(self):
+        resp = self._post(login="")
+        assert resp.status_code == 422
+
+    def test_login_empty_password(self):
+        resp = self._post(password="")
+        assert resp.status_code == 422
+
+
+class TestCreateAccessToken:
+    def test_token_contains_user_identity_and_expiry(self):
+        import jwt
+        from datetime import datetime, timedelta, timezone
+
+        from app.core.config import settings
+
+        user = User(
+            id=7,
+            full_name="Иван",
+            birth_date=date(1995, 1, 1),
+            login="ivan",
+            password_hash="x",
+            phone="+79990000000",
+            telegram="@ivan",
+            role=UserRole.USER.value,
+        )
+        token = create_access_token(user)
+        claims = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        assert claims["sub"] == "7"
+        assert claims["role"] == UserRole.USER.value
+        exp = datetime.fromtimestamp(claims["exp"], tz=timezone.utc)
+        lifetime = exp - datetime.fromtimestamp(claims["iat"], tz=timezone.utc)
+        assert lifetime == timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
+
+
+class TestRegisterBootstrap:
+    def setup_method(self):
+        self.client = TestClient(app, raise_server_exceptions=False)
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def test_register_first_user_in_empty_db_is_employee(self):
+        db = _mock_db(existing_login=None, count=0)
+        app.dependency_overrides[get_db] = lambda: db
+        resp = self.client.post("/auth/register", json=_valid_payload())
+        assert resp.status_code == 201
+        assert resp.json()["role"] == UserRole.EMPLOYEE.value
+
+    def test_register_when_users_exist_is_regular_user(self):
+        db = _mock_db(existing_login=None, count=1)
+        app.dependency_overrides[get_db] = lambda: db
+        resp = self.client.post("/auth/register", json=_valid_payload())
+        assert resp.status_code == 201
+        assert resp.json()["role"] == UserRole.USER.value
+
+
+class TestEmployeeLoginEndpoint:
+    PASSWORD = "Abcdef1!"
+
+    def setup_method(self):
+        self.client = TestClient(app, raise_server_exceptions=False)
+        self._db = _mock_db(
+            existing_login="ivan",
+            password_hash=hash_password(self.PASSWORD),
+            role=UserRole.EMPLOYEE.value,
+        )
+        app.dependency_overrides[get_db] = lambda: self._db
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def _post(self, **overrides):
+        payload = {"login": "ivan", "code": STAFF_LOGIN_CODE, "password": self.PASSWORD}
+        payload.update(overrides)
+        return self.client.post("/auth/login/employee", json=payload)
+
+    def test_employee_login_success_sets_http_only_cookie(self):
+        resp = self._post()
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["role"] == UserRole.EMPLOYEE.value
+        set_cookie = resp.headers.get("set-cookie", "")
+        assert "access_token=" in set_cookie
+        assert "HttpOnly" in set_cookie
+        assert resp.cookies.get("access_token")
+
+    def test_employee_login_returns_employee_jwt(self):
+        import jwt
+
+        from app.core.config import settings
+
+        resp = self._post()
+        token = resp.cookies.get("access_token")
+        claims = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        assert claims["sub"] == "1"
+        assert claims["role"] == UserRole.EMPLOYEE.value
+
+    def test_employee_login_trims_login_like_registration(self):
+        resp = self._post(login="  ivan  ")
+        assert resp.status_code == 200
+
+    def test_employee_login_wrong_code(self):
+        resp = self._post(code="000000")
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == MSG_INVALID_STAFF_CODE
+        assert "access_token" not in resp.cookies
+
+    def test_employee_login_wrong_password(self):
+        resp = self._post(password="WrongPass1!")
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == MSG_INVALID_CREDENTIALS
+
+    def test_employee_login_unknown_login(self):
+        db = _mock_db(existing_login=None, password_hash="x")
+        app.dependency_overrides[get_db] = lambda: db
+        resp = self._post(login="nobody")
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == MSG_INVALID_CREDENTIALS
+
+    def test_employee_login_forbidden_for_regular_user(self):
+        db = _mock_db(
+            existing_login="ivan",
+            password_hash=hash_password(self.PASSWORD),
+            role=UserRole.USER.value,
+        )
+        app.dependency_overrides[get_db] = lambda: db
+        resp = self._post()
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == MSG_NOT_EMPLOYEE
+
+    def test_employee_login_code_first(self):
+        # Неверный код отбивается до запросов к БД: пользователя даже не ищем.
+        db = _mock_db(existing_login="ivan", password_hash="x")
+        app.dependency_overrides[get_db] = lambda: db
+        resp = self._post(code="000000")
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == MSG_INVALID_STAFF_CODE
+
+    def test_employee_login_empty_code(self):
+        resp = self._post(code="")
+        assert resp.status_code == 422
+
+    def test_employee_login_empty_password(self):
+        resp = self._post(password="")
+        assert resp.status_code == 422

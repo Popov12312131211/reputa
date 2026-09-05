@@ -109,3 +109,49 @@ class RegisterResponse(BaseModel):
     phone: str
     telegram: str
     role: str
+
+
+class _CredentialsBase(BaseModel):
+    """Общая валидация логина/пароля для всех эндпоинтов входа."""
+
+    login: str
+    password: str
+
+    @field_validator("login")
+    @classmethod
+    def validate_login(cls, v: str) -> str:
+        # Логин нормализуется так же, как при регистрации, чтобы оба парных
+        # эндпоинта трактовали поле одинаково (без обрезки сработал бы неверный путь).
+        return _strip_required(v, "Логин не может быть пустым")
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        # Сложность пароля при входе не проверяем: он уже провалидирован при
+        # регистрации. Здесь — только отсутствие пустого значения.
+        if not v:
+            raise ValueError("Пароль не может быть пустым")
+        return v
+
+
+class LoginRequest(_CredentialsBase):
+    pass
+
+
+class EmployeeLoginRequest(_CredentialsBase):
+    code: str
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, v: str) -> str:
+        return _strip_required(v, "Код не может быть пустым")
+
+
+class LoginResponse(BaseModel):
+    id: int
+    full_name: str
+    birth_date: date
+    login: str
+    phone: str
+    telegram: str
+    role: str
