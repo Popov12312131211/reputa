@@ -10,7 +10,7 @@ from app.core.constants import (
     TELEGRAM_MAX_LENGTH,
     TELEGRAM_PREFIX,
 )
-from app.schemas.auth import _strip_required
+from app.schemas.validators import _strip_required
 
 
 class ApplicationCreate(BaseModel):
