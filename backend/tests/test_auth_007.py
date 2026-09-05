@@ -94,8 +94,12 @@ class TestPrivateRoutesMiddleware:
         assert resp.status_code == 404
 
     def test_valid_employee_token_passes_middleware(self):
+        # Маршрут EMP-002 (/employee/settings) уже существует и обращается к БД,
+        # поэтому для проверки прохождения middleware берём ещё не реализованный
+        # частный маршрут сотрудника: ответ 404 (не 401) означает, что middleware
+        # пропустил корректный токен сотрудника.
         resp = self.client.get(
-            "/employee/settings",
+            "/employee/newApplication",
             cookies={"access_token": _token(role=UserRole.EMPLOYEE.value)},
         )
         assert resp.status_code == 404
