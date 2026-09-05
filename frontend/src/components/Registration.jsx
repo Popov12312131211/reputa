@@ -10,6 +10,7 @@ import {
   DATE,
   TELEGRAM,
 } from '../constants/auth'
+import { requiredIsValid, phoneIsValid, formatPhone } from '../utils/validators'
 import './Registration.css'
 
 function fullNameIsValid(value) {
@@ -39,29 +40,6 @@ function dateIsValid(value) {
     (todayStart.getMonth() === month - 1 && todayStart.getDate() < day) ? 1 : 0
   )
   return age >= DATE.MIN_AGE
-}
-
-function loginIsValid(value) {
-  return value.trim().length > 0
-}
-
-function phoneIsValid(value) {
-  return value.replace(/\D/g, '').length === PHONE.DIGITS
-}
-
-function formatPhone(digits) {
-  let d = digits.replace(/\D/g, '')
-  if (d.length > 0 && d[0] === '8') d = '7' + d.slice(1)
-  if (d.length > 0 && d[0] !== '7') d = '7' + d
-  d = d.slice(0, 11)
-
-  let formatted = '+7'
-  if (d.length > 1) formatted += '(' + d.slice(1, 4)
-  if (d.length >= 4) formatted += ')'
-  if (d.length > 4) formatted += d.slice(4, 7)
-  if (d.length > 7) formatted += '-' + d.slice(7, 9)
-  if (d.length > 9) formatted += '-' + d.slice(9, 11)
-  return formatted
 }
 
 function formatDate(value) {
@@ -110,7 +88,7 @@ export default function Registration() {
       case 'birthDate':
         return dateIsValid(v)
       case 'login':
-        return loginIsValid(v)
+        return requiredIsValid(v)
       case 'phone':
         return phoneIsValid(v)
       case 'telegram':
