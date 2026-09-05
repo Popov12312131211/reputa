@@ -3,10 +3,12 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.db.session import check_db_connection
 from app.routers.auth import router as auth_router
+from app.routers.applications import router as applications_router
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
 app.include_router(auth_router)
+app.include_router(applications_router)
 
 
 @app.get("/health")
