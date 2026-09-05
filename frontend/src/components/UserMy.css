@@ -1,0 +1,271 @@
+.usermy-page {
+  --bg-page: #F8F7F2;
+  --card: #FFFFFF;
+  --text: #191919;
+  --text-muted: #6E7168;
+  --border: #E6E3D9;
+  --accent: #51B38A;
+  --accent-hover: #3E8F6D;
+  --error: #C1584A;
+  --card-radius: 24px;
+
+  min-height: 100vh;
+  padding: 40px 48px;
+  background: var(--bg-page);
+}
+
+.usermy-page__inner {
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.usermy-page__title {
+  font-family: "RockStar", "Inter", Arial, sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+.usermy-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  padding: 24px;
+}
+
+.usermy-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 16px;
+}
+
+.usermy-empty__text {
+  font-size: 16px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.usermy-empty__link {
+  font-size: 15px;
+  color: var(--accent-hover);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.usermy-empty__link:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.usermy-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.usermy-table__head,
+.usermy-table__row {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr 1.4fr 1.4fr 1fr;
+  align-items: center;
+  column-gap: 16px;
+}
+
+.usermy-table__head {
+  padding: 0 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.usermy-table__row {
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.usermy-table__row:last-child {
+  border-bottom: none;
+}
+
+.usermy-table__cell {
+  min-width: 0;
+}
+
+.usermy-table__cell--head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.usermy-table__cell--id {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.usermy-table__cell--amount {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.usermy-table__cell--date {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.usermy-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.usermy-table__sort:hover {
+  color: var(--text);
+}
+
+.usermy-table__sort--active {
+  color: var(--text);
+}
+
+.usermy-table__sort-arrow {
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.usermy-table__sort-arrow--asc {
+  transform: rotate(180deg);
+}
+
+.usermy-table__cell--score {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.usermy-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.usermy-status--pending {
+  color: #b98a2e;
+  background: #f7efd9;
+}
+
+.usermy-status--approved {
+  color: var(--accent-hover);
+  background: var(--accent-bg, #dff2ea);
+}
+
+.usermy-status--rejected {
+  color: var(--error);
+  background: #f4e0dd;
+}
+
+.usermy-filter {
+  position: relative;
+  display: inline-flex;
+}
+
+.usermy-filter__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.usermy-filter__button:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.usermy-filter__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 160px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(25, 25, 25, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.usermy-filter__option {
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.usermy-filter__option:hover {
+  background: var(--accent-bg, #dff2ea);
+}
+
+.usermy-filter__option--active {
+  background: var(--accent);
+  color: #FFFFFF;
+}
+
+@media (max-width: 640px) {
+  .usermy-page {
+    padding: 24px 16px;
+  }
+
+  .usermy-card {
+    padding: 16px;
+  }
+
+  .usermy-table__head,
+  .usermy-table__row {
+    grid-template-columns: 1fr 0.6fr 1fr 1fr;
+  }
+
+  .usermy-table__cell--score {
+    display: none;
+  }
+}

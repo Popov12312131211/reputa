@@ -1,6 +1,23 @@
 // Общий helper для POST-запросов к API. Все запросы идут на относительный
 // /api/...: в dev-режиме проксирует Vite, в проде — nginx, и оба срезают
 // префикс /api перед передачей на бэкенд.
+export async function getJSON(url) {
+  const res = await fetch(url, { credentials: 'include' })
+
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    // не-JSON ответ
+  }
+
+  if (!res.ok) {
+    const detail = data && typeof data.detail === 'string' ? data.detail : null
+    return { ok: false, error: detail }
+  }
+  return { ok: true, data }
+}
+
 export async function postJSON(url, body) {
   const res = await fetch(url, {
     method: 'POST',
