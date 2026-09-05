@@ -1,7 +1,5 @@
 import { useMemo } from 'react'
 import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import PlaceholderPage from './components/PlaceholderPage'
 import Landing from './components/Landing'
 import Login from './components/Login'
 import LoginWork from './components/LoginWork'
@@ -10,6 +8,8 @@ import UserNew from './components/UserNew'
 import UserMy from './components/UserMy'
 import UserSettings from './components/UserSettings'
 import EmployeeSettings from './components/EmployeeSettings'
+import EmployeeNewApplication from './components/EmployeeNewApplication'
+import EmployeeApplication from './components/EmployeeApplication'
 import RequireAuth from './components/RequireAuth'
 import { AuthProvider } from './contexts/AuthContext'
 
@@ -17,8 +17,6 @@ import { AuthProvider } from './contexts/AuthContext'
 // (createBrowserRouter): useBlocker на странице настроек (предупреждение об
 // уходе с несохранёнными изменениями) работает только под data router.
 export default function App() {
-  const { t } = useTranslation()
-
   const router = useMemo(
     () =>
       createBrowserRouter(
@@ -33,13 +31,12 @@ export default function App() {
               <Route path="/user/my" element={<UserMy />} />
               <Route path="/user/new" element={<UserNew />} />
               <Route path="/employee/settings" element={<EmployeeSettings />} />
-              <Route path="/employee/newApplication" element={<PlaceholderPage title={t('routes.employeeNewApplication')} />} />
-              <Route path="/employee/application" element={<PlaceholderPage title={t('routes.employeeApplication')} />} />
+              <Route path="/employee/newApplication" element={<EmployeeNewApplication />} />
+              <Route path="/employee/application" element={<EmployeeApplication />} />
             </Route>
           </>,
         ),
       ),
-    [t],
   )
 
   return (
