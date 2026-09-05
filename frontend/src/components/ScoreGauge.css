@@ -1,0 +1,101 @@
+.gauge {
+  /* COMP-002: собственные цвета шкалы, не зависящие от контекста использования */
+  --gauge-low: #E06170;
+  --gauge-mid: #E8A33D;
+  --gauge-high: #51B38A;
+  --gauge-muted: #9AA0A6;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.gauge__title {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text-muted, #6E7168);
+}
+
+.gauge__svg {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+}
+
+.gauge__zone {
+  fill: none;
+  stroke-width: 12;
+}
+
+.gauge__zone--low {
+  stroke: var(--gauge-low);
+}
+
+.gauge__zone--mid {
+  stroke: var(--gauge-mid);
+}
+
+.gauge__zone--high {
+  stroke: var(--gauge-high);
+}
+
+.gauge__marker {
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+/* Цвет риски совпадает с цветом зоны, в которой стоит значение. */
+.gauge__marker--low {
+  stroke: var(--gauge-low);
+}
+
+.gauge__marker--mid {
+  stroke: var(--gauge-mid);
+}
+
+.gauge__marker--high {
+  stroke: var(--gauge-high);
+}
+
+.gauge__tick {
+  stroke: var(--gauge-muted);
+  stroke-width: 2;
+}
+
+.gauge__tick-label {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  fill: var(--gauge-muted);
+}
+
+.gauge__number {
+  font-family: "RockStar", "Inter", Arial, sans-serif;
+  font-size: 52px;
+  font-weight: 400;
+  fill: var(--gauge-muted);
+}
+
+.gauge__number--low {
+  fill: var(--gauge-low);
+}
+
+.gauge__number--mid {
+  fill: var(--gauge-mid);
+}
+
+.gauge__number--high {
+  fill: var(--gauge-high);
+}
+
+.gauge__dot--low {
+  fill: var(--gauge-low);
+}
+
+.gauge__dot--mid {
+  fill: var(--gauge-mid);
+}
+
+.gauge__dot--high {
+  fill: var(--gauge-high);
+}

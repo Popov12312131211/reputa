@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth, ROLE_HOME } from '../contexts/AuthContext'
+import { postJSON } from '../api'
 import { SHOW_AUTH_ILLUSTRATION } from '../constants/auth'
 import './LoginWork.css'
 
 export default function LoginWork() {
   const { t } = useTranslation()
+  const { setUser } = useAuth()
+  const navigate = useNavigate()
 
   const [login, setLogin] = useState('')
   const [code, setCode] = useState('')
@@ -19,20 +23,33 @@ export default function LoginWork() {
   const passwordValid = password.length > 0
   const formValid = loginValid && codeValid && passwordValid
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setTouched({ login: true, code: true, password: true })
 
     if (!formValid) return
 
     setServerError('')
-    // TODO: отправка на AUTH-002 (backend ещё не реализован)
-    setServerError(t('loginWork.serverNotReady'))
+    const result = await postJSON('/api/auth/login/employee', {
+      login: login.trim(),
+      code: code.trim(),
+      password,
+    })
+
+    if (!result.ok) {
+      setServerError(result.error || t('loginWork.error'))
+      return
+    }
+
+    setUser(result.data)
+    navigate(ROLE_HOME[result.data.role] || '/login')
   }
 
   function handleSendCode(e) {
     e.preventDefault()
-    // TODO: отправка одноразового кода на бэкенде
+    // MVP (AUTH-003): код статичный (STAFF_LOGIN_CODE "123456"), эндпоинт
+    // отправки SMS в PLAN.md не предусмотрен — кнопка остаётся без действия.
+    setServerError('')
   }
 
   return (

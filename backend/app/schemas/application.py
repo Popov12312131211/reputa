@@ -69,3 +69,9 @@ class ApplicationResponse(BaseModel):
     status: str
     score: int | None = None
     created_at: datetime | None = None
+
+
+class ApplicationDetailResponse(ApplicationResponse):
+    """Детальная карточка заявки (APP-005). Добавляет ФИО заёмщика для шапки."""
+
+    full_name: str

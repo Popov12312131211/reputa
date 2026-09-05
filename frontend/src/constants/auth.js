@@ -22,3 +22,13 @@ export const PASSWORD_RULES = [
 ]
 
 export const PHONE_MASK = '+7(XXX)XXX-XX-XX'
+
+export const TELEGRAM = {
+  isValid: (value) => /^@[A-Za-z0-9_]+$/.test(value.trim()),
+  format: (value) => {
+    let v = value
+    while (v.indexOf('@@') === 0) v = v.slice(1)
+    if (v.length > 0 && v[0] !== '@') v = '@' + v
+    return v
+  },
+}

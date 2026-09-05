@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { postJSON } from '../api'
 import {
   SHOW_AUTH_ILLUSTRATION,
   PASSWORD_RULES,
   PHONE_MASK,
   PHONE,
   DATE,
+  TELEGRAM,
 } from '../constants/auth'
 import './Registration.css'
 
@@ -47,10 +49,6 @@ function phoneIsValid(value) {
   return value.replace(/\D/g, '').length === PHONE.DIGITS
 }
 
-function telegramIsValid(value) {
-  return /^@[A-Za-z0-9_]+$/.test(value.trim())
-}
-
 function formatPhone(digits) {
   let d = digits.replace(/\D/g, '')
   if (d.length > 0 && d[0] === '8') d = '7' + d.slice(1)
@@ -75,15 +73,9 @@ function formatDate(value) {
   return formatted
 }
 
-function formatTelegram(value) {
-  let v = value
-  while (v.indexOf('@@') === 0) v = v.slice(1)
-  if (v.length > 0 && v[0] !== '@') v = '@' + v
-  return v
-}
-
 export default function Registration() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
 
   const [values, setValues] = useState({
     fullName: '',
@@ -122,7 +114,7 @@ export default function Registration() {
       case 'phone':
         return phoneIsValid(v)
       case 'telegram':
-        return telegramIsValid(v)
+        return TELEGRAM.isValid(v)
       default:
         return true
     }
@@ -137,7 +129,7 @@ export default function Registration() {
     validateField('phone') &&
     validateField('telegram')
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     const allTouched = Object.keys(values).reduce((acc, key) => {
       acc[key] = true
@@ -148,8 +140,25 @@ export default function Registration() {
     if (!formValid) return
 
     setServerError('')
-    // TODO: отправка на AUTH-001 (backend ещё не реализован) — AUTH-004 использует заглушку.
-    setServerError(t('registration.serverNotReady'))
+
+    const [day, month, year] = values.birthDate.split('.')
+    const phoneDigits = values.phone.replace(/\D/g, '')
+
+    const result = await postJSON('/api/auth/register', {
+      full_name: values.fullName.trim(),
+      birth_date: `${year}-${month}-${day}`,
+      login: values.login.trim(),
+      password: values.password,
+      phone: `+${phoneDigits}`,
+      telegram: values.telegram.trim(),
+    })
+
+    if (!result.ok) {
+      setServerError(result.error || t('registration.error'))
+      return
+    }
+
+    navigate('/login')
   }
 
   function toggleVisible(field) {
@@ -344,7 +353,7 @@ export default function Registration() {
               placeholder="@username"
               required
               value={values.telegram}
-              onChange={(e) => setField('telegram', formatTelegram(e.target.value))}
+              onChange={(e) => setField('telegram', TELEGRAM.format(e.target.value))}
               onFocus={() => {
                 if (!values.telegram) setField('telegram', '@')
               }}
