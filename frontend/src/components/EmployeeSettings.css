@@ -10,7 +10,7 @@
   --card-radius: 24px;
 
   min-height: 100vh;
-  padding: 40px 48px;
+  padding: 40px 48px 88px;
   background: var(--bg-page);
 }
 
@@ -33,6 +33,7 @@
   border: 1px solid var(--border);
   border-radius: var(--card-radius);
   padding: 40px;
+  margin-bottom: 24px;
 }
 
 .employeesettings-card__subtitle {
@@ -42,30 +43,17 @@
   margin: 0 0 16px;
 }
 
-.employeesettings-loading {
-  font-size: 14px;
-  line-height: 18px;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.employeesettings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.employeesettings-form__desc {
-  font-size: 14px;
-  line-height: 18px;
-  color: var(--text-muted);
-  margin: 0;
+.employeesettings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 .employeesettings-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr auto;
   gap: 16px;
+  align-items: start;
 }
 
 .employeesettings-field {
@@ -80,33 +68,240 @@
   color: var(--text-muted);
 }
 
+/* Все инпуты одной высоты и с одинаковыми внутренними отступами, чтобы сетка
+   2×2 и пара пароля были выровнены идеально; отступ справа оставляет место
+   под иконку редактирования. */
+.employeesettings-field__wrap {
+  position: relative;
+}
+
 .employeesettings-field__input {
   width: 100%;
   height: 48px;
   padding: 0 16px;
+  padding-right: 44px;
   font-family: "Inter", Arial, sans-serif;
   font-size: 16px;
   font-weight: 200;
-  color: var(--text);
   background: #FFFFFF;
   border: 1px solid #1C201D;
   border-radius: 12px;
   outline: none;
   transition: border-color 0.2s ease;
+  box-sizing: border-box;
 }
 
-.employeesettings-field__input::placeholder {
+/* Поля порогов в блоке «Автоматизация» — без иконки карандаша, обычный ввод. */
+.employeesettings-field__input--auto {
+  padding-right: 16px;
+  color: var(--text);
+}
+
+.employeesettings-field__input--readonly {
   color: var(--text-muted);
+}
+
+.employeesettings-field__input--editable {
+  color: var(--text);
 }
 
 .employeesettings-field__input:focus {
   border-color: var(--accent-hover);
 }
 
+/* Поля пароля: отступ под иконку глаза вместо иконки редактирования. */
+.employeesettings-field__wrap .employeesettings-field__input--password {
+  padding-right: 56px;
+}
+
 .employeesettings-field__error {
   font-size: 12px;
   line-height: 16px;
   color: var(--error);
+  margin: 0;
+}
+
+.employeesettings-field__pencil {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.employeesettings-field__pencil:hover {
+  color: var(--accent);
+}
+
+.employeesettings-field__pencil--active {
+  color: var(--accent);
+}
+
+/* Глаз показать/скрыть пароль — как на странице регистрации. */
+.employeesettings-field__toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.employeesettings-field__toggle:hover {
+  color: var(--text);
+}
+
+.employeesettings-field__eye--closed {
+  display: none;
+}
+
+.employeesettings-field__toggle--visible .employeesettings-field__eye--open {
+  display: none;
+}
+
+.employeesettings-field__toggle--visible .employeesettings-field__eye--closed {
+  display: block;
+}
+
+/* Подсказка требований к паролю — как на странице регистрации. */
+.employeesettings-field__hint {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.employeesettings-field__hint li {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.employeesettings-field__hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.employeesettings-field__hint--ok .employeesettings-field__hint-icon {
+  color: var(--accent);
+}
+
+.employeesettings-field__hint--ok {
+  color: var(--accent);
+}
+
+/* Пара паролей + общая кнопка редактирования в одном ряду с полями. */
+.employeesettings-password {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.employeesettings-password__edit {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-top: 26px;
+}
+
+.employeesettings-password__pencil {
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF;
+  border: 1px solid #1C201D;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.employeesettings-password__pencil:hover {
+  color: var(--accent);
+}
+
+.employeesettings-password__pencil--active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.employeesettings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.employeesettings-actions__btn {
+  width: 100%;
+  height: 52px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 200;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.employeesettings-actions__btn--danger {
+  background: #F4E2DF;
+  color: #A9443B;
+}
+
+.employeesettings-actions__btn--danger:hover {
+  background: #EBCBC5;
+}
+
+/* Блок «Автоматизация»: описание и числовые поля порогов. */
+.employeesettings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.employeesettings-form__desc {
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.employeesettings-loading {
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -142,16 +337,124 @@
   cursor: not-allowed;
 }
 
+/* Фиксированная кнопка «Сохранить» — правый нижний угол, поверх контента. */
+.employeesettings-save {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  height: 48px;
+  padding: 0 28px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 200;
+  color: #FFFFFF;
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(25, 25, 25, 0.15);
+  transition: background 0.2s ease;
+  z-index: 10;
+}
+
+.employeesettings-save:hover {
+  background: var(--accent-hover);
+}
+
+.employeesettings-save:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Подтверждение ухода со страницы при несохранённых изменениях. */
+.employeesettings-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(25, 25, 25, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.employeesettings-confirm__box {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.employeesettings-confirm__title {
+  font-family: "RockStar", "Inter", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--text);
+  margin: 0;
+}
+
+.employeesettings-confirm__message {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.employeesettings-confirm__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.employeesettings-confirm__btn {
+  flex: 1;
+  height: 44px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 200;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.employeesettings-confirm__btn--stay {
+  color: #FFFFFF;
+  background: var(--accent);
+}
+
+.employeesettings-confirm__btn--stay:hover {
+  background: var(--accent-hover);
+}
+
+.employeesettings-confirm__btn--leave {
+  background: #F4E2DF;
+  color: #A9443B;
+}
+
+.employeesettings-confirm__btn--leave:hover {
+  background: #EBCBC5;
+}
+
 @media (max-width: 640px) {
   .employeesettings-page {
-    padding: 24px 16px;
+    padding: 24px 16px 88px;
   }
 
   .employeesettings-card {
     padding: 24px 16px;
   }
 
-  .employeesettings-row {
+  .employeesettings-grid,
+  .employeesettings-row,
+  .employeesettings-actions {
     grid-template-columns: 1fr;
   }
 }
