@@ -111,6 +111,11 @@ class RegisterResponse(BaseModel):
     role: str
 
 
+class MeResponse(BaseModel):
+    id: int
+    full_name: str
+      
+      
 class _CredentialsBase(BaseModel):
     """Общая валидация логина/пароля для всех эндпоинтов входа."""
 

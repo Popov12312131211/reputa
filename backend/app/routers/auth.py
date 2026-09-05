@@ -12,7 +12,9 @@ from app.core.constants import (
 )
 from app.db.session import get_db
 from app.models.user import User, UserRole
+from app.routers.deps import get_current_user
 from app.schemas.auth import (
+    MeResponse,
     RegisterRequest,
     RegisterResponse,
     LoginRequest,
@@ -77,6 +79,11 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     return user
 
 
+@router.get("/me", response_model=MeResponse)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
+  
+  
 @router.post("/login", response_model=LoginResponse)
 def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.login == body.login).first()

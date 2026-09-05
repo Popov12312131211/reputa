@@ -27,3 +27,11 @@ def create_access_token(user: User) -> str:
         "exp": now + timedelta(minutes=settings.JWT_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_access_token(token: str) -> dict | None:
+    """Возвращает payload JWT или None при невалидном/просроченном токене."""
+    try:
+        return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
