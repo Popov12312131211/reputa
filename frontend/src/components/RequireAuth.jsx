@@ -1,14 +1,11 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth, ROLES } from '../contexts/AuthContext'
+import { useAuth, ROLES, ROLE_HOME } from '../contexts/AuthContext'
 import Layout from './Layout'
 
 // Route guard для приватных маршрутов (/user/*, /employee/*):
 // гости пользовательской зоны уходят на /login, гости зоны сотрудников —
-// на /loginWork; пользователя с чужой ролью перенаправляем в его кабинет.
-const ROLE_HOME = {
-  [ROLES.USER]: '/user/my',
-  [ROLES.EMPLOYEE]: '/employee/settings',
-}
+// на /loginWork; пользователя с чужой ролью перенаправляем в его кабинет
+// (ROLE_HOME из AuthContext).
 
 export default function RequireAuth() {
   const { user, role, loading } = useAuth()

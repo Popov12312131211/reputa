@@ -1,10 +1,19 @@
 .sidebar {
+  /* Палитра по токенам проекта; отдельная — сайдбар живёт вне страничных
+     обёрток, которые обычно задают эти переменные у себя. */
+  --card: #ffffff;
+  --text: #191919;
+  --text-muted: #6e7168;
+  --border: #d8d4c5;
+  --accent: #51b38a;
+  --accent-hover: #3e8f6d;
+  --accent-bg: #dff2ea;
+
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
   height: 100vh;
-  min-width: 60px;
   max-width: 30vw;
   border-right: 1px solid var(--border);
   background: var(--card);
@@ -13,50 +22,40 @@
   transition: width 0.2s ease;
 }
 
-.sidebar__header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 12px;
+/* Во время перетаскивания ширина следует за курсором без анимации;
+   доскальзывание до свёрнутого/развёрнутого состояния анимируется после
+   отпускания кнопки мыши. */
+.sidebar--dragging {
+  transition: none;
 }
 
-.sidebar__toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-.sidebar__toggle:hover {
-  opacity: 1;
-  background: var(--accent-bg);
-  color: var(--accent);
-}
-
+/* Пункты меню прижаты к верху, небольшой отступ сверху. */
 .sidebar__menu {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 12px;
+  padding: 14px 8px 0;
 }
 
 .sidebar__item {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
   padding: 10px 12px;
   border-radius: 8px;
   text-decoration: none;
   color: var(--text-muted);
   white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* Иконки всегда одного фиксированного размера — при перетаскивании/сворачивании
+   меняется только видимость подписи и общая ширина колонки, не масштаб иконок. */
+.sidebar__item svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
 }
 
 .sidebar__item:hover {
@@ -74,18 +73,24 @@
   line-height: 1.2;
 }
 
+.sidebar[data-collapsed] .sidebar__label {
+  display: none;
+}
+
+/* Логотип внизу, отделён горизонтальной линией от пунктов меню. */
 .sidebar__footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 12px;
+  margin-top: auto;
+  gap: 14px;
+  padding: 16px;
 }
 
 .sidebar__divider {
   width: 100%;
   border: none;
   border-top: 1px solid var(--border);
-  margin-bottom: 16px;
 }
 
 .sidebar__logo {
@@ -95,11 +100,9 @@
   white-space: nowrap;
 }
 
-.sidebar[data-collapsed] .sidebar__label {
-  display: none;
-}
-
-/* Невидимая зона захвата на правом крае; визуальной «ручкой» служит border-right */
+/* Перетаскиваемая правая граница: совпадает с видимой разделительной линией.
+   Видима и при свёрнутом состоянии (у края сайдбара), чтобы можно было
+   развернуть колонку обратно перетаскиванием. */
 .sidebar__handle {
   position: absolute;
   top: 0;
@@ -108,8 +111,4 @@
   width: 8px;
   cursor: col-resize;
   background: transparent;
-}
-
-.sidebar[data-collapsed] .sidebar__handle {
-  display: none;
 }
