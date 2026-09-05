@@ -44,6 +44,10 @@
 {
   "id": 1,
   "full_name": "Иванов Иван Иванович",
+  "birth_date": "1995-05-20",
+  "login": "ivan",
+  "phone": "+79990000000",
+  "telegram": "@ivan",
   "role": "user"
 }
 ```
@@ -59,52 +63,32 @@
 - Устанавливает httpOnly cookie `access_token` с JWT (HS256, TTL 24 ч).
 - Payload JWT: `{ "sub": "<user_id>", "role": "user" }`.
 
-Зависимости:
-- `passlib[bcrypt]` + `python-jose[cryptography]` — добавить в `requirements.txt`.
-- Таблица `users` (INFRA-003) — сравнение `password_hash` через `bcrypt.verify()`.
-
----
-
 ### 2. AUTH-003 — Вход для сотрудников
 
-**POST `/api/auth/login-work`**
+**POST `/api/auth/login/employee`**
 
-Описание: Аутентификация сотрудника по логину, коду с телефона и паролю.
+Описание: Аутентификация сотрудника по логину, коду и паролю.
 
 Запрос:
 ```json
 {
   "login": "string",
-  "phone_code": "string",
+  "code": "123456",
   "password": "string"
 }
 ```
 
-Ответ — успех (200):
-```json
-{
-  "id": 1,
-  "full_name": "Иванов Иван Иванович",
-  "role": "employee"
-}
-```
+Ответ — успех (200): тот же состав, что у `POST /auth/login`, с `"role": "employee"`.
 
-Ответ — ошибка (401):
-```json
-{
-  "detail": "Неверный логин, код или пароль"
-}
-```
+Ответ — ошибка (401): `{ "detail": "Неверный код" }` (неверный код) или `{ "detail": "Неверный логин или пароль" }` (неверный логин/пароль); несотрудник — 403 `{ "detail": "Вход разрешён только сотрудникам" }`.
 
 Побочные эффекты:
 - Устанавливает httpOnly cookie `access_token` с JWT (HS256, TTL 24 ч).
 - Payload JWT: `{ "sub": "<user_id>", "role": "employee" }`.
 
 Примечания:
-- Дефолтный код для MVP: `"123456"`.
+- Дефолтный код для MVP: `"123456"` (эндпоинт отправки SMS не предусмотрен).
 - Если в БД нет пользователей — первый зарегистрированный автоматически получает роль `employee`.
-
----
 
 ### 3. AUTH-007 (связанный) — Проверка текущей сессии
 
@@ -128,8 +112,6 @@
 }
 ```
 
----
-
 ### 4. AUTH-001 (связанный) — Регистрация
 
 **POST `/api/auth/register`**
@@ -143,19 +125,14 @@
   "birth_date": "2000-01-15",
   "login": "IvanIvanov2000",
   "password": "StrongPass1!",
-  "phone": "+7(999)123-45-67",
+  "phone": "+79991234567",
   "telegram": "@ivanov"
 }
 ```
 
-Ответ — успех (201):
-```json
-{
-  "id": 1,
-  "full_name": "Иванов Иван Иванович",
-  "role": "user"
-}
-```
+Примечание: `phone` принимается как `+` и цифры (7–15) без маски — фронтенд снимает форматирование `+7(XXX)XXX-XX-XX` перед отправкой.
+
+Ответ — успех (201): `{ "id", "full_name", "birth_date", "login", "phone", "telegram", "role" }`.
 
 Ответ — ошибка (422 / 409):
 ```json
@@ -163,32 +140,3 @@
   "detail": "Пользователь с таким логином уже существует"
 }
 ```
-
----
-
-## Что осталось (подключение к бэкенду)
-
-После реализации AUTH-002 в `Login.jsx` необходимо:
-
-1. Заменить заглушку в `handleSubmit` на `POST /api/auth/login`:
-   ```js
-   const res = await fetch('/api/auth/login', {
-     method: 'POST',
-     headers: { 'Content-Type': 'application/json' },
-     credentials: 'include',
-     body: JSON.stringify({ login, password })
-   })
-   ```
-
-2. Обработать ответ:
-   - **200** → сохранить данные пользователя в `AuthContext`, перенаправить на `/user/my` (или `/employee/settings` если `role === 'employee'`).
-   - **401** → показать сообщение «Неверный логин или пароль».
-   - **422** → показать ошибки валидации полей.
-
-3. Обновить `AuthContext` для чтения роли из JWT (вместо URL-пути) — вызов `GET /api/auth/me` при загрузке приложения.
-
-4. Добавить `credentials: 'include'` во все fetch-запросы для передачи httpOnly cookie.
-
-## Блокеры
-- AUTH-002 (backend) — эндпоинт входа по логину/паролю.
-- AUTH-007 — middleware проверки JWT на бэкенде + route guard на фронтенде (иначе после входа пользователь попадёт на защищённую страницу без защиты).

@@ -49,8 +49,14 @@ PHONE_PATTERN = rf"^\+?\d{{{PHONE_MIN_DIGITS},{PHONE_MAX_DIGITS}}}$"
 # Префикс telegram-ника
 TELEGRAM_PREFIX = "@"
 
+# Авторизация: имя httpOnly-cookie с JWT
+COOKIE_NAME = "access_token"
+
 # Хеширование пароля
 PWD_SCHEME_BCRYPT = "bcrypt"
+
+# Код сотрудника для входа (MVP: статичный код, без реальной отправки SMS)
+STAFF_LOGIN_CODE = "123456"
 
 # Валидация даты рождения: отсев будущих дат и нереалистичного возраста
 USER_MAX_AGE_YEARS = 150
@@ -68,3 +74,7 @@ JWT_COOKIE_NAME = "access_token"
 MSG_USER_ALREADY_EXISTS = "Пользователь с таким логином уже существует"
 MSG_AUTH_REQUIRED = "Требуется авторизация"
 MSG_STATEMENT_TOO_LARGE = "Файл выписки превышает допустимый размер"
+MSG_NOT_AUTHENTICATED = "Не авторизован"
+MSG_INVALID_CREDENTIALS = "Неверный логин или пароль"
+MSG_INVALID_STAFF_CODE = "Неверный код"
+MSG_NOT_EMPLOYEE = "Вход разрешён только сотрудникам"

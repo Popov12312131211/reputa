@@ -7,4 +7,3 @@ venv
 .git
 .gitignore
 tests
-alembic/versions
