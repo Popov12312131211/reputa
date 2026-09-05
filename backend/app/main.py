@@ -12,6 +12,7 @@ from app.db.session import check_db_connection
 from app.routers.auth import router as auth_router
 from app.routers.applications import router as applications_router
 from app.routers.user_applications import router as user_applications_router
+from app.routers.employee import router as employee_router
 from app.services.auth import decode_access_token
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -19,6 +20,7 @@ app = FastAPI(title=settings.PROJECT_NAME)
 app.include_router(auth_router)
 app.include_router(applications_router)
 app.include_router(user_applications_router)
+app.include_router(employee_router)
 
 # Роли, которым разрешены приватные префиксы.
 # Guard на уровне middleware избавляет каждый будущий роутер

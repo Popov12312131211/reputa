@@ -7,6 +7,7 @@ import LoginWork from './components/LoginWork'
 import Registration from './components/Registration'
 import UserNew from './components/UserNew'
 import UserMy from './components/UserMy'
+import EmployeeSettings from './components/EmployeeSettings'
 import RequireAuth from './components/RequireAuth'
 import { AuthProvider } from './contexts/AuthContext'
 
@@ -24,7 +25,7 @@ export default function App() {
           <Route path="/user/settings" element={<PlaceholderPage title={t('routes.userSettings')} />} />
           <Route path="/user/my" element={<UserMy />} />
           <Route path="/user/new" element={<UserNew />} />
-          <Route path="/employee/settings" element={<PlaceholderPage title={t('routes.employeeSettings')} />} />
+          <Route path="/employee/settings" element={<EmployeeSettings />} />
           <Route path="/employee/newApplication" element={<PlaceholderPage title={t('routes.employeeNewApplication')} />} />
           <Route path="/employee/application" element={<PlaceholderPage title={t('routes.employeeApplication')} />} />
         </Route>

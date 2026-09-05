@@ -19,9 +19,18 @@ from app.services.security import create_access_token
 from app.routers import applications as applications_module
 from app.core.constants import (
     APPLICATION_STATUS_IN_QUEUE,
+    MSG_STATEMENT_UNPARSABLE,
     PURPOSE_MAX_LENGTH,
     TELEGRAM_CHANNEL_MAX_LENGTH,
 )
+
+
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+
+
+def _sber_fixture() -> bytes:
+    with open(os.path.join(FIXTURES_DIR, "sber.pdf"), "rb") as fh:
+        return fh.read()
 
 
 def _mock_db(fail_commit=False):
@@ -104,7 +113,7 @@ class TestCreateApplicationEndpoint:
         if data:
             payload.update(data)
         if files is None:
-            files = {"statement": ("stmt.pdf", b"%PDF-1.4 fake", "application/pdf")}
+            files = {"statement": ("sber.pdf", _sber_fixture(), "application/pdf")}
         return self.client.post("/applications", data=payload, files=files)
 
     def test_create_application_success(self):
@@ -235,6 +244,20 @@ class TestCreateApplicationEndpoint:
         )
         assert resp.status_code == 413
         assert db.committed is False
+
+    def test_create_application_unparseable_statement_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(
+            db,
+            files={"statement": ("garbage.pdf", b"not a pdf at all", "application/pdf")},
+        )
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == MSG_STATEMENT_UNPARSABLE
+        assert db.committed is False
+        assert db.added == []
 
     def test_create_application_unauthenticated_returns_401(self):
         db = _mock_db()
