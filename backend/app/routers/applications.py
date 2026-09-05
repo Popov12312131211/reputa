@@ -6,11 +6,16 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.core.constants import MSG_STATEMENT_TOO_LARGE, STATEMENT_MAX_SIZE_BYTES
+from app.core.constants import (
+    MSG_STATEMENT_TOO_LARGE,
+    MSG_STATEMENT_UNPARSABLE,
+    STATEMENT_MAX_SIZE_BYTES,
+)
 from app.db.session import get_db
 from app.models.application import Application, ApplicationStatus
 from app.models.user import User
 from app.schemas.application import ApplicationCreate, ApplicationResponse
+from app.scoring.stmt_parser import StatementParseError, parse_statement
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -48,8 +53,17 @@ async def create_application(
             detail=MSG_STATEMENT_TOO_LARGE,
         )
 
-    # STMT-001 парсит файл в структурированные данные (остаток, поступления, траты).
-    # Файл нигде не сохраняется (см. PLAN.md), поэтому здесь он только принимается.
+    # STMT-001: выписка разбирается на данные (остаток, поступления, траты).
+    # Файл нигде не сохраняется (см. PLAN.md), распознавание служит валидацией
+    # того, что загружен именно файл-выписка поддерживаемого банка.
+    try:
+        parse_statement(statement_content, filename=statement.filename)
+    except StatementParseError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=MSG_STATEMENT_UNPARSABLE,
+        ) from None
+
     application = Application(
         user_id=current_user.id,
         amount=data.amount,

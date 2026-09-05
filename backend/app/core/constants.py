@@ -73,6 +73,25 @@ AMOUNT_MIN_VALUE = 0
 # Файл выписки: лимит размера до парсинга (STMT-001)
 STATEMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024
 
+# Банки, выписки которых умеет распознавать STMT-001
+STATEMENT_BANK_ALFA = "alfa"
+STATEMENT_BANK_SBER = "sber"
+STATEMENT_BANK_OZON = "ozon"
+
+# Категории операций из структурированной выписки (STMT-001).
+# Поступающие операции отделены от трат: расходы агрегируются по категориям,
+# поступления — одной суммой, поэтому ключа-«Поступления» в тратах нет.
+STMT_CATEGORY_INCOME = "поступления"
+STMT_CATEGORY_GROCERIES = "продукты"
+STMT_CATEGORY_CAFES = "кафе и рестораны"
+STMT_CATEGORY_TRANSPORT = "транспорт"
+STMT_CATEGORY_HEALTH = "здоровье"
+STMT_CATEGORY_UTILITIES = "жкх и связь"
+STMT_CATEGORY_SERVICES = "сервисы и подписки"
+STMT_CATEGORY_SHOPPING = "покупки"
+STMT_CATEGORY_TRANSFERS = "переводы"
+STMT_CATEGORY_OTHER = "прочее"
+
 # JWT: имя httpOnly cookie, в которой хранится токен
 JWT_COOKIE_NAME = "access_token"
 
@@ -80,6 +99,7 @@ JWT_COOKIE_NAME = "access_token"
 MSG_USER_ALREADY_EXISTS = "Пользователь с таким логином уже существует"
 MSG_AUTH_REQUIRED = "Требуется авторизация"
 MSG_STATEMENT_TOO_LARGE = "Файл выписки превышает допустимый размер"
+MSG_STATEMENT_UNPARSABLE = "Не удалось распознать выписку банка. Поддерживаются выписки Альфа-Банка, СберБанка и Озон Банка"
 MSG_NOT_AUTHENTICATED = "Не авторизован"
 MSG_INVALID_CREDENTIALS = "Неверный логин или пароль"
 MSG_INVALID_STAFF_CODE = "Неверный код"
