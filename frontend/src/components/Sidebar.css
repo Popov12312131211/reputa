@@ -77,15 +77,12 @@
   display: none;
 }
 
-/* Логотип внизу, отделён горизонтальной линией от пунктов меню.
-   Divider идёт на всю ширину сайдбара — горизонтальный padding только
-   у самого логотипа. Левый отступ совпадает с текстом пунктов меню:
-   8 (menu padding) + 12 (item padding) + 20 (иконка) + 10 (gap) = 50px.
-   В свёрнутом состоянии отступ = 20px (выравнивание с колонкой иконок). */
+/* Логотип внизу по центру сайдбара, отделён горизонтальной линией от пунктов
+   меню. Divider идёт на всю ширину сайдбара — выравнивается по центру. */
 .sidebar__footer {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   margin-top: auto;
   gap: 14px;
   padding: 16px 0;
@@ -105,12 +102,6 @@
   white-space: nowrap;
   display: inline-flex;
   align-items: baseline;
-  margin-left: 50px;
-  transition: margin-left 0.2s ease;
-}
-
-.sidebar[data-collapsed] .sidebar__logo {
-  margin-left: 20px;
 }
 
 /* "eputa" плавно схлопывается: max-width 0 + opacity сливается в один символ "R".
