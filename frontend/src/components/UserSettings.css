@@ -1,0 +1,138 @@
+.user-settings {
+  --settings-bg: #F8F7F2;
+  --settings-card: #FFFFFF;
+  --settings-text: #191919;
+  --settings-muted: #6E7168;
+  --settings-border: #E6E3D9;
+  --settings-accent: #51B38A;
+  --settings-accent-hover: #3E8F6D;
+  --settings-error: #C1584A;
+
+  min-height: 100vh;
+  padding: clamp(32px, 7vw, 88px) clamp(24px, 8vw, 120px);
+  color: var(--settings-text);
+  background: var(--settings-bg);
+}
+
+.user-settings__heading {
+  max-width: 680px;
+  margin-bottom: 36px;
+}
+
+.user-settings__eyebrow {
+  margin: 0 0 12px;
+  color: var(--settings-accent-hover);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.user-settings h1 {
+  margin: 0;
+  font-family: "RockStar", "Inter", Arial, sans-serif;
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.user-settings__description {
+  max-width: 500px;
+  margin: 18px 0 0;
+  color: var(--settings-muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.user-settings__form {
+  max-width: 760px;
+  padding: clamp(24px, 4vw, 48px);
+  background: var(--settings-card);
+  border: 1px solid var(--settings-border);
+  border-radius: 8px;
+}
+
+.user-settings__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.user-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--settings-muted);
+  font-size: 14px;
+}
+
+.user-settings__password {
+  grid-column: 1 / -1;
+}
+
+.user-settings input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  color: var(--settings-text);
+  background: #FFFFFF;
+  border: 1px solid #1C201D;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+}
+
+.user-settings input:focus {
+  border-color: var(--settings-accent-hover);
+}
+
+.user-settings__submit {
+  min-width: 180px;
+  height: 48px;
+  margin-top: 28px;
+  padding: 0 24px;
+  color: #FFFFFF;
+  background: var(--settings-accent);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.2s ease;
+}
+
+.user-settings__submit:hover:not(:disabled) {
+  background: var(--settings-accent-hover);
+}
+
+.user-settings__submit:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.user-settings__message {
+  margin: 24px 0 0;
+  font-size: 14px;
+}
+
+.user-settings__message--success {
+  color: var(--settings-accent-hover);
+}
+
+.user-settings__message--error {
+  color: var(--settings-error);
+}
+
+.user-settings__status {
+  color: var(--settings-muted);
+}
+
+@media (max-width: 640px) {
+  .user-settings__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .user-settings__password {
+    grid-column: auto;
+  }
+}

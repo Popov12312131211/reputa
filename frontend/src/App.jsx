@@ -6,6 +6,7 @@ import Layout from './components/Layout'
 import Login from './components/Login'
 import LoginWork from './components/LoginWork'
 import Registration from './components/Registration'
+import UserSettings from './components/UserSettings'
 import { AuthProvider } from './contexts/AuthContext'
 
 export default function App() {
@@ -24,7 +25,7 @@ export default function App() {
           </AuthProvider>
         }
       >
-        <Route path="/user/settings" element={<PlaceholderPage title={t('routes.userSettings')} />} />
+        <Route path="/user/settings" element={<UserSettings />} />
         <Route path="/user/my" element={<PlaceholderPage title={t('routes.userMy')} />} />
         <Route path="/user/new" element={<PlaceholderPage title={t('routes.userNew')} />} />
         <Route path="/employee/settings" element={<PlaceholderPage title={t('routes.employeeSettings')} />} />
