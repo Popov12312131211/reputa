@@ -110,7 +110,9 @@ export default function Sidebar() {
       </nav>
       <div className="sidebar__footer">
         <hr className="sidebar__divider" />
-        <span className="sidebar__logo">Reputa</span>
+        <span className="sidebar__logo">
+          R<span className="sidebar__logo-rest">eputa</span>
+        </span>
       </div>
       {/* Перетаскиваемая правая граница — та же видимая разделительная линия. */}
       <div className="sidebar__handle" ref={handleRef} aria-hidden="true" />

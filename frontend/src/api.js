@@ -42,6 +42,29 @@ export async function postJSON(url, body) {
   return { ok: true, data }
 }
 
+// POST с multipart/form-data (загрузка файлов). Content-Type не задаём —
+// браузер сам выставляет его вместе с случайной boundary.
+export async function postFormData(url, formData) {
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    // не-JSON ответ — расцениваем как обычную сетевую ошибку ниже
+  }
+
+  if (!res.ok) {
+    const detail = data && typeof data.detail === 'string' ? data.detail : null
+    return { ok: false, error: detail }
+  }
+  return { ok: true, data }
+}
+
 // Извлекает текст ошибки из ответа: быстрые коды приходят строкой в detail
 // (401/403/409), ошибки валидации (422) — массивом объектов с полем msg,
 // их склеиваем в одну строку для показа.

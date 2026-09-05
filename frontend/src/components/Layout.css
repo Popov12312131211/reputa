@@ -1,6 +1,7 @@
 .layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .layout__content {
@@ -9,4 +10,5 @@
   flex: 1;
   min-width: 0;
   background: var(--bg-page, #f8f7f2);
+  overflow-y: auto;
 }

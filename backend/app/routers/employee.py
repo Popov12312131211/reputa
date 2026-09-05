@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.threshold_settings import ThresholdSettings
 from app.models.user import User
-from app.routers.deps import get_current_user
 from app.schemas.threshold import ThresholdSettingsResponse, ThresholdSettingsUpdate
 from app.services.auto_processing import get_threshold_settings
 

@@ -7,25 +7,6 @@ import { APPLICATION_STATUS, STATUS_GROUP } from '../constants/application'
 import ScoreGauge from './ScoreGauge'
 import './UserMy.css'
 
-// ВРЕМЕННЫЕ ЗАГЛУШКИ до реального подключения API карточки (эндпоинт списка
-// заявок пользователя и передача full_name/цели с бэкенда — СЛЕДУЮЩИЙ ШАГ,
-// отдельной задачей, здесь не реализуется). Значения констант — договорённые
-// плейсхолдеры формы, чтобы карточка не показывала пустые/сломанные поля.
-const FIO_STUB = 'Иванов Иван Иванович'
-const PURPOSE_STUB = 'На покупку нового ПК'
-const SCORE_STUB = 72
-
-// Заглушка: бэкенд-эндпоинт заявок пользователя (APP-002+/APP-004 backend)
-// ещё не реализован — используем мок с имитацией данных, чтобы не ломать
-// вёрстку. Поля full_name/purpose/score ниже — те же временные заглушки.
-// TODO: заменить на реальный GET /api/user/applications после реализации APP-004.
-const MOCK_APPLICATIONS = [
-  { id: '123DE456', amount: 25000, purpose: PURPOSE_STUB, full_name: FIO_STUB, score: SCORE_STUB, status: APPLICATION_STATUS.AUTO_APPROVED, createdAt: '2026-09-01T10:15:00.000Z' },
-  { id: '123DE457', amount: 150000, purpose: PURPOSE_STUB, full_name: FIO_STUB, score: 34, status: APPLICATION_STATUS.EMPLOYEE_REJECTED, createdAt: '2026-08-28T14:40:00.000Z' },
-  { id: '123DE458', amount: 5000, purpose: PURPOSE_STUB, full_name: FIO_STUB, score: null, status: APPLICATION_STATUS.IN_QUEUE, createdAt: '2026-09-04T09:05:00.000Z' },
-  { id: '123DE459', amount: 120000, purpose: PURPOSE_STUB, full_name: FIO_STUB, score: 88, status: APPLICATION_STATUS.EMPLOYEE_APPROVED, createdAt: '2026-08-30T18:22:00.000Z' },
-]
-
 const STATUS_ICON = {
   [APPLICATION_STATUS.IN_QUEUE]: Clock,
   [APPLICATION_STATUS.AUTO_APPROVED]: Check,
@@ -97,6 +78,7 @@ export default function UserMy() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' })
   const [detail, setDetail] = useState(null)
+  const [loadError, setLoadError] = useState(false)
 
   const menuId = searchParams.get('menu')
 
@@ -118,8 +100,13 @@ export default function UserMy() {
     let cancelled = false
     getJSON('/api/user/applications').then((res) => {
       if (cancelled) return
-      // Заглушка до реализации бэкенда: показываем мок.
-      setApplications(res.ok && Array.isArray(res.data) ? res.data : MOCK_APPLICATIONS)
+      if (res.ok && Array.isArray(res.data)) {
+        setApplications(res.data)
+        setLoadError(false)
+      } else {
+        setApplications(null)
+        setLoadError(true)
+      }
     })
     return () => {
       cancelled = true
@@ -127,9 +114,9 @@ export default function UserMy() {
   }, [])
 
   // APP-005: детальная карточка открывается по ?menu={id}. Данные берём с
-  // бэкенда (эндпоинт проверяет принадлежность заявки текущему пользователю),
-  // при недоступности/404 подставляем строку из уже загруженного списка — так
-  // карточка не ломается, пока список заявок работает на мок-данных (APP-002).
+  // бэкенда (эндпоинт проверяет принадлежность заявки текущему пользователю);
+  // отдельная строка из списка не подставляется — карточка целиком живёт
+  // на данных GET /user/applications/{application_id}.
   useEffect(() => {
     if (menuId == null) {
       setDetail(null)
@@ -143,24 +130,12 @@ export default function UserMy() {
         setDetail({ status: 'ready', data: res.data })
         return
       }
-      const local = (applications || []).find((a) => String(a.id) === String(menuId))
-      if (local) {
-        // Заглушка: подставляем строку списка; её поля full_name/purpose/score
-        // заполнены плейсхолдерами (FIO_STUB/PURPOSE_STUB), поэтому в карточке
-        // нет пустых полей. Не берём ФИО из контекста авторизации (там реальные
-        // данные пользователя, а не заёмщика карточки).
-        setDetail({
-          status: 'ready',
-          data: { ...local, full_name: local.full_name || FIO_STUB, purpose: local.purpose || PURPOSE_STUB },
-        })
-      } else {
-        setDetail({ status: 'error' })
-      }
+      setDetail({ status: 'error' })
     })
     return () => {
       cancelled = true
     }
-  }, [menuId, applications])
+  }, [menuId])
 
   // Закрытие по Escape и блокировка прокрутки страницы под модальным окном.
   useEffect(() => {
@@ -199,8 +174,8 @@ export default function UserMy() {
         va = a.score != null ? a.score : fallback
         vb = b.score != null ? b.score : fallback
       } else {
-        va = new Date(a.createdAt).getTime()
-        vb = new Date(b.createdAt).getTime()
+        va = new Date(a.created_at).getTime()
+        vb = new Date(b.created_at).getTime()
       }
       const diff = va - vb
       return sort.dir === 'desc' ? diff * -1 : diff
@@ -216,7 +191,11 @@ export default function UserMy() {
         <h1 className="usermy-page__title">{t('userMy.title')}</h1>
 
         <div className="usermy-card">
-          {applications && applications.length === 0 ? (
+          {loadError ? (
+            <div className="usermy-empty">
+              <p className="usermy-empty__text">{t('userMy.loadError')}</p>
+            </div>
+          ) : applications && applications.length === 0 ? (
             <div className="usermy-empty">
               <p className="usermy-empty__text">{t('userMy.empty')}</p>
               <Link className="usermy-empty__link" to="/user/new">
@@ -329,7 +308,7 @@ export default function UserMy() {
                       {formatAmount(app.amount)} ₽
                     </div>
                     <div className="usermy-table__cell usermy-table__cell--date" role="cell">
-                      {formatDate(app.createdAt)}
+                      {formatDate(app.created_at)}
                     </div>
                     <div className="usermy-table__cell usermy-table__cell--score" role="cell">
                       {app.score != null ? app.score : '—'}

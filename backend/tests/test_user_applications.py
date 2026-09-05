@@ -53,6 +53,75 @@ class FakeDb:
         return None
 
 
+class ListFakeDb:
+    """Fake DB для GET /user/applications (query -> filter -> order_by -> all)."""
+
+    def __init__(self, rows):
+        self._rows = rows
+        self._conds = []
+
+    def query(self, model):
+        return self
+
+    def filter(self, *args, **kwargs):
+        for arg in args:
+            column = getattr(arg, "left", None)
+            right = getattr(arg, "right", None)
+            value = getattr(right, "value", right)
+            self._conds.append((getattr(column, "name", None), value))
+        return self
+
+    def order_by(self, *args):
+        return self
+
+    def all(self):
+        return [r for r in self._rows if all(getattr(r, n) == v for n, v in self._conds)]
+
+
+class TestUserApplicationList:
+    def setup_method(self):
+        self.client = TestClient(app, raise_server_exceptions=False)
+        app.dependency_overrides.clear()
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def _make_application(self, app_id, user_id=1):
+        return Application(
+            id=app_id,
+            user_id=user_id,
+            amount=Decimal("1000.00"),
+            purpose="Покупка ноутбука",
+            telegram="@ivan",
+            telegram_channel="@ivan_channel",
+            status="in_queue",
+            score=None,
+            created_at=datetime(2026, 9, 1, 12, 0, 0),
+        )
+
+    def test_lists_only_current_users_applications(self):
+        # Чужая заявка (user_id=2) должна отсекаться фильтром по текущему пользователю.
+        rows = [
+            self._make_application(app_id=10, user_id=1),
+            self._make_application(app_id=11, user_id=2),
+        ]
+        app.dependency_overrides[get_db] = lambda: ListFakeDb(rows)
+        app.dependency_overrides[get_current_user] = lambda: _user(1)
+        resp = self.client.get(
+            "/user/applications",
+            cookies={"access_token": create_access_token(_user(1))},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert [row["id"] for row in body] == [10]
+
+    def test_unauthenticated_returns_401(self):
+        app.dependency_overrides[get_db] = lambda: ListFakeDb([])
+        app.dependency_overrides.pop(get_current_user, None)
+        resp = self.client.get("/user/applications")
+        assert resp.status_code == 401
+
+
 class TestUserApplicationDetail:
     def setup_method(self):
         self.client = TestClient(app, raise_server_exceptions=False)

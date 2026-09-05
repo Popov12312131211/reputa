@@ -25,7 +25,7 @@ async def create_application(
     amount: Decimal = Form(...),
     purpose: str = Form(...),
     telegram: str = Form(...),
-    telegram_channel: str = Form(...),
+    telegram_channel: str = Form(""),
     statement: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

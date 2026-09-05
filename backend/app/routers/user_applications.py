@@ -6,12 +6,28 @@ from app.core.constants import MSG_APPLICATION_NOT_FOUND
 from app.db.session import get_db
 from app.models.application import Application
 from app.models.user import User
-from app.schemas.application import ApplicationDetailResponse
+from app.schemas.application import ApplicationDetailResponse, ApplicationResponse
 
 # Роутер заявок пользователя (APP-004/APP-005). Префикс /user/ уже защищён
 # middleware-ом (main.py) для роли "user", здесь дополнительно убеждаемся,
 # что заявка принадлежит именно текущему авторизованному пользователю.
 router = APIRouter(prefix="/user/applications", tags=["user applications"])
+
+
+@router.get("", response_model=list[ApplicationResponse])
+def list_applications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # APP-004: таблица /user/my показывает только заявки текущего пользователя,
+    # новые сверху. Детальные поля (full_name/purpose) в списке не нужны —
+    # их отдаёт GET /user/applications/{application_id} для карточки (APP-005).
+    return (
+        db.query(Application)
+        .filter(Application.user_id == current_user.id)
+        .order_by(Application.created_at.desc())
+        .all()
+    )
 
 
 @router.get("/{application_id}", response_model=ApplicationDetailResponse)

@@ -15,7 +15,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.application import ApplicationCreate
-from app.services.security import create_access_token
+from app.services.auth import create_access_token
 from app.routers import applications as applications_module
 from app.core.constants import (
     APPLICATION_STATUS_IN_QUEUE,
@@ -214,14 +214,23 @@ class TestCreateApplicationEndpoint:
         assert resp.status_code == 422
         assert db.committed is False
 
-    def test_create_application_channel_blank_returns_422(self):
+    def test_create_application_channel_blank_accepted(self):
         db = _mock_db()
         self._set_db(db)
         self._set_user()
 
         resp = self._post(db, data={"telegram_channel": ""})
-        assert resp.status_code == 422
-        assert db.committed is False
+        assert resp.status_code == 201
+        assert db.added[0].telegram_channel == ""
+
+    def test_create_application_channel_omitted_accepted(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"telegram_channel": None})
+        assert resp.status_code == 201
+        assert db.added[0].telegram_channel == ""
 
     def test_create_application_channel_too_long_returns_422(self):
         db = _mock_db()
@@ -280,7 +289,19 @@ class TestCreateApplicationEndpoint:
     def test_create_application_unknown_user_returns_401(self):
         db = _mock_db()
         self._set_db(db)
-        self.client.cookies.set("access_token", create_access_token(999))
+        # Токен выпускается для пользователя, которого нет в БД (и которого
+        # не вернёт fake-БД) — реальная зависимость get_current_user даёт 401.
+        ghost = User(
+            id=999,
+            full_name="Призрак",
+            birth_date=date(1995, 5, 20),
+            login="ghost",
+            password_hash="hash",
+            phone="+79990000000",
+            telegram="@ghost",
+            role=UserRole.USER.value,
+        )
+        self.client.cookies.set("access_token", create_access_token(ghost))
 
         resp = self._post(db)
         assert resp.status_code == 401
@@ -336,11 +357,20 @@ class TestApplicationCreateValidation:
                 telegram_channel="@ivan_channel",
             )
 
-    def test_telegram_channel_blank_rejected(self):
+    def test_telegram_channel_blank_accepted(self):
+        req = ApplicationCreate(
+            amount=Decimal("1000"),
+            purpose="Ремонт",
+            telegram="@ivan",
+            telegram_channel="",
+        )
+        assert req.telegram_channel == ""
+
+    def test_telegram_channel_without_at_rejected(self):
         with pytest.raises(ValidationError):
             ApplicationCreate(
                 amount=Decimal("1000"),
                 purpose="Ремонт",
                 telegram="@ivan",
-                telegram_channel="",
+                telegram_channel="ivan_channel",
             )
