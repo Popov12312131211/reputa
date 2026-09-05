@@ -1,30 +1,18 @@
-import re
 from datetime import date
 
 from pydantic import BaseModel, field_validator
 
 from app.core.constants import (
-    PASSWORD_MIN_LENGTH,
-    PASSWORD_MAX_LENGTH,
-    PASSWORD_REGEX_UPPERCASE,
-    PASSWORD_REGEX_LOWERCASE,
-    PASSWORD_REGEX_DIGIT,
-    PASSWORD_REGEX_SPECIAL,
     FULL_NAME_MAX_LENGTH,
     LOGIN_MAX_LENGTH,
-    PHONE_MAX_LENGTH,
-    PHONE_PATTERN,
-    TELEGRAM_MAX_LENGTH,
-    TELEGRAM_PREFIX,
     USER_MAX_AGE_YEARS,
 )
-
-
-def _strip_required(v: str, empty_msg: str) -> str:
-    cleaned = v.strip()
-    if not cleaned:
-        raise ValueError(empty_msg)
-    return cleaned
+from app.schemas.validators import (
+    _strip_required,
+    validate_password,
+    validate_phone,
+    validate_telegram,
+)
 
 
 class RegisterRequest(BaseModel):
@@ -64,41 +52,18 @@ class RegisterRequest(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def validate_password(cls, v: str) -> str:
-        if len(v) < PASSWORD_MIN_LENGTH:
-            raise ValueError(f"Пароль должен содержать минимум {PASSWORD_MIN_LENGTH} символов")
-        if len(v) > PASSWORD_MAX_LENGTH:
-            raise ValueError(f"Пароль не может превышать {PASSWORD_MAX_LENGTH} символов")
-        if not re.search(PASSWORD_REGEX_UPPERCASE, v):
-            raise ValueError("Пароль должен содержать хотя бы одну заглавную букву")
-        if not re.search(PASSWORD_REGEX_LOWERCASE, v):
-            raise ValueError("Пароль должен содержать хотя бы одну строчную букву")
-        if not re.search(PASSWORD_REGEX_DIGIT, v):
-            raise ValueError("Пароль должен содержать хотя бы одну цифру")
-        if not re.search(PASSWORD_REGEX_SPECIAL, v):
-            raise ValueError("Пароль должен содержать хотя бы один спецсимвол")
-        return v
+    def validate_password_field(cls, v: str) -> str:
+        return validate_password(v)
 
     @field_validator("phone")
     @classmethod
-    def validate_phone(cls, v: str) -> str:
-        v = v.strip()
-        # Дешёвая проверка длины первой, затем точный паттерн из constants
-        if len(v) > PHONE_MAX_LENGTH:
-            raise ValueError(f"Телефон не может превышать {PHONE_MAX_LENGTH} символов")
-        if not re.match(PHONE_PATTERN, v):
-            raise ValueError("Некорректный формат телефона")
-        return v
+    def validate_phone_field(cls, v: str) -> str:
+        return validate_phone(v)
 
     @field_validator("telegram")
     @classmethod
-    def validate_telegram(cls, v: str) -> str:
-        v = v.strip()
-        if not v.startswith(TELEGRAM_PREFIX):
-            raise ValueError("Телеграм должен начинаться с @")
-        if len(v) > TELEGRAM_MAX_LENGTH:
-            raise ValueError(f"Телеграм не может превышать {TELEGRAM_MAX_LENGTH} символов")
-        return v
+    def validate_telegram_field(cls, v: str) -> str:
+        return validate_telegram(v)
 
 
 class RegisterResponse(BaseModel):
