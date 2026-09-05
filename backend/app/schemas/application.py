@@ -75,3 +75,10 @@ class ApplicationDetailResponse(ApplicationResponse):
     """Детальная карточка заявки (APP-005). Добавляет ФИО заёмщика для шапки."""
 
     full_name: str
+
+
+class ApplicationListItemResponse(ApplicationResponse):
+    """Строка списка всех заявок для сотрудника (EMP-004). Добавляет ФИО
+    заёмщика из связанной таблицы users для таблицы /employee/application."""
+
+    full_name: str
