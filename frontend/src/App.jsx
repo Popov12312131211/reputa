@@ -2,11 +2,11 @@ import { Routes, Route } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import PlaceholderPage from './components/PlaceholderPage'
 import Landing from './components/Landing'
-import Layout from './components/Layout'
 import Login from './components/Login'
 import LoginWork from './components/LoginWork'
 import Registration from './components/Registration'
 import UserNew from './components/UserNew'
+import RequireAuth from './components/RequireAuth'
 import { AuthProvider } from './contexts/AuthContext'
 
 export default function App() {
@@ -21,7 +21,7 @@ export default function App() {
       <Route
         element={
           <AuthProvider>
-            <Layout />
+            <RequireAuth />
           </AuthProvider>
         }
       >

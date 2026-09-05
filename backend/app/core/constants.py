@@ -49,6 +49,9 @@ PHONE_PATTERN = rf"^\+?\d{{{PHONE_MIN_DIGITS},{PHONE_MAX_DIGITS}}}$"
 # Префикс telegram-ника
 TELEGRAM_PREFIX = "@"
 
+# Авторизация: имя httpOnly-cookie с JWT
+COOKIE_NAME = "access_token"
+
 # Хеширование пароля
 PWD_SCHEME_BCRYPT = "bcrypt"
 
@@ -60,6 +63,7 @@ USER_MAX_AGE_YEARS = 150
 
 # Сообщения API (общие для роутера, чтобы не дублировать строки)
 MSG_USER_ALREADY_EXISTS = "Пользователь с таким логином уже существует"
+MSG_NOT_AUTHENTICATED = "Не авторизован"
 MSG_INVALID_CREDENTIALS = "Неверный логин или пароль"
 MSG_INVALID_STAFF_CODE = "Неверный код"
 MSG_NOT_EMPLOYEE = "Вход разрешён только сотрудникам"
