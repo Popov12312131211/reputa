@@ -109,3 +109,9 @@ class RegisterResponse(BaseModel):
     phone: str
     telegram: str
     role: str
+
+
+class MeResponse(BaseModel):
+    id: int
+    full_name: str
+    role: str

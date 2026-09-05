@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.core.constants import MSG_USER_ALREADY_EXISTS
 from app.db.session import get_db
 from app.models.user import User, UserRole
-from app.schemas.auth import RegisterRequest, RegisterResponse
+from app.routers.deps import get_current_user
+from app.schemas.auth import MeResponse, RegisterRequest, RegisterResponse
 from app.services.auth import hash_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -43,3 +44,8 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
         ) from exc
 
     return user
+
+
+@router.get("/me", response_model=MeResponse)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
