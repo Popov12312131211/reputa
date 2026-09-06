@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { Clock, Check, X, Search, Filter, Hash } from 'lucide-react'
 import { getJSON } from '../api'
 import { APPLICATION_STATUS, STATUS_GROUP } from '../constants/application'
-import { mockApplications, toEmployeeApplication } from '../mocks/employeeApplications'
 import ApplicationDetailModal from './ApplicationDetail'
 import './EmployeeApplication.css'
 
@@ -89,7 +88,7 @@ export default function EmployeeApplication() {
       if (res.ok && Array.isArray(res.data)) {
         setApplications(res.data)
       } else {
-        setApplications(mockApplications.map(toEmployeeApplication))
+        setApplications([])
       }
     })
     return () => {

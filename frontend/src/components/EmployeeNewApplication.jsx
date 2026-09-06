@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { Clock, Check, X, Search, Hash } from 'lucide-react'
 import { getJSON } from '../api'
 import { APPLICATION_STATUS, STATUS_GROUP } from '../constants/application'
-import { mockApplications, toEmployeeApplication } from '../mocks/employeeApplications'
 import ApplicationDetailModal from './ApplicationDetail'
 import './EmployeeNewApplication.css'
 
@@ -15,11 +14,6 @@ const STATUS_ICON = {
   [APPLICATION_STATUS.EMPLOYEE_APPROVED]: Check,
   [APPLICATION_STATUS.EMPLOYEE_REJECTED]: X,
 }
-
-// Заглушка очереди сотрудника: backend-эндпоинт списка заявок для кабинета
-// ещё не реализован (см. EMP-004), поэтому при недоступности
-// GET /api/employee/applications таблица показывает общий mock
-// (mocks/employeeApplications.js — тот же, что в /employee/application).
 
 function formatAmount(value) {
   return new Intl.NumberFormat('ru-RU').format(value)
@@ -81,7 +75,7 @@ export default function EmployeeNewApplication() {
       if (res.ok && Array.isArray(res.data)) {
         setApplications(res.data)
       } else {
-        setApplications(mockApplications.map(toEmployeeApplication))
+        setApplications([])
       }
     })
     return () => {

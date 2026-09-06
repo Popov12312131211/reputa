@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Check, Clock, Download, X } from 'lucide-react'
 import { getJSON, postJSON } from '../api'
 import { APPLICATION_STATUS, STATUS_GROUP } from '../constants/application'
-import { mockApplications, toEmployeeApplication } from '../mocks/employeeApplications'
 import ScoreGauge from './ScoreGauge'
 import './ApplicationDetail.css'
 
@@ -85,9 +84,8 @@ export default function ApplicationDetailModal({ menuId, onClose, onDecided }) {
   const scoreResult = app && app.score_result ? app.score_result : null
 
   // Карточка целиком живёт на ответе GET /employee/applications/{id} —
-  // отдельная строка из списка не подставляется. Когда backend-эндпоинт
-  // недоступен, карточка показывает ту же заявку из общего mock-хранилища
-  // (mocks/employeeApplications.js) — заглушка не блокирует сценарий.
+  // отдельная строка из списка не подставляется. При недоступности эндпоинта
+  // статус карточки — ошибка.
   useEffect(() => {
     if (menuId == null) {
       setDetail(null)
@@ -102,15 +100,6 @@ export default function ApplicationDetailModal({ menuId, onClose, onDecided }) {
       if (res.ok) {
         setDetail({ status: 'ready', data: res.data })
         setDownloads(Array.isArray(res.data.downloads) ? res.data.downloads : [])
-        return
-      }
-      const mockApp = mockApplications.find(
-        (item) => String(item.id) === String(menuId)
-      )
-      if (mockApp) {
-        const data = toEmployeeApplication(mockApp)
-        setDetail({ status: 'ready', data })
-        setDownloads(Array.isArray(data.downloads) ? data.downloads : [])
         return
       }
       setDetail({ status: 'error' })
@@ -169,9 +158,8 @@ export default function ApplicationDetailModal({ menuId, onClose, onDecided }) {
     setDeciding(false)
   }
 
-  // EMP-005: история скачиваний отчёта живёт локально — записи из mock-данных
-  // (mocks/employeeApplications.js) показываются как стартовая история, новые
-  // добавляются в момент реальной выгрузки файла.
+  // EMP-005: история скачиваний приходит с бэкенда (GET /employee/applications/{id}),
+  // новые записи добавляются в момент реальной выгрузки файла.
   function generateDownloadId() {
     return `ID${Math.floor(100000000 + Math.random() * 900000000)}`
   }
