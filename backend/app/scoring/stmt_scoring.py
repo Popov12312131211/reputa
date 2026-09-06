@@ -86,72 +86,89 @@ def calculate_statement_features(statement: ParsedBankStatement) -> dict[str, fl
 
 
 
-def score_statement(statement: ParsedBankStatement) -> StatementScoringResult:
-    feats = calculate_statement_features(statement)
-    positive_signals = []
-    risk_factors = []
-    
-    # Базовый балл
+def calculate_score_from_features(feats: dict[str, float]) -> dict:
+    """
+    Универсальная функция начисления баллов. 
+    Принимает готовый словарь признаков, возвращает итоговый скор и отчет.
+    """
+    positive_signals: list[str] = []
+    risk_factors: list[str] = []
     raw_score = 50.0
 
+    # 1. Денежный поток (cashflow_ratio). Влияние: от -25 до +20
     cfr = feats["cashflow_ratio"]
-    if cfr >= 1.30:
-        raw_score += 25.0
-        positive_signals.append("Крупный профицит: доходы стабильно и значительно превышают расходы.")
-    elif 1.05 <= cfr < 1.30:
-        raw_score += 12.0
-        positive_signals.append("Положительный баланс: клиент тратит меньше, чем зарабатывает.")
-    elif 0.95 <= cfr < 1.05:
-        risk_factors.append("Бюджет 'в ноль': накопления практически не формируются.")
-    else:
-        raw_score -= 20.0
-        risk_factors.append("Хронический дефицит: расходы превышают регулярные поступления.")
-
-    ess = feats["essential_ratio"]
-    if 0.30 <= ess <= 0.65:
+    if cfr >= 1.20:
+        raw_score += 20.0
+        positive_signals.append("Уверенный профицит: доходы превышают расходы более чем на 20%.")
+    elif 1.05 <= cfr < 1.20:
         raw_score += 10.0
-        positive_signals.append("Сбалансированная структура трат на базовые жизненные нужды.")
-    elif ess > 0.85:
-        raw_score -= 15.0
-        risk_factors.append("Критическая доля базовых расходов: высокий риск потери платежеспособности.")
-
-    disc = feats["discretionary_ratio"]
-    if disc > 0.35 and cfr < 1.10:
-        raw_score -= 15.0
-        risk_factors.append("Высокие траты на развлечения при отсутствии существенного профицита бюджета.")
-    elif disc < 0.20:
-        raw_score += 5.0
-        positive_signals.append("Строгий контроль необязательных расходов.")
-
-    if feats["num_incomes"] >= 3:
-        if feats["income_interval_std"] < 7.0:
-            raw_score += 15.0
-            positive_signals.append("Идеальная ритмичность поступлений (минимальный разброс в датах).")
-        elif feats["income_interval_std"] < 15.0:
-            raw_score += 5.0
+        positive_signals.append("Положительный баланс: траты меньше заработка.")
+    elif 0.95 <= cfr < 1.05:
+        raw_score -= 10.0
+        risk_factors.append("Бюджет 'в ноль': отсутствие формирования капитала.")
     else:
-        raw_score -= 15.0
-        risk_factors.append("Нерегулярный, разовый или нестабильный характер доходов.")
+        raw_score -= 25.0
+        risk_factors.append("Дефицит бюджета: расходы стабильно превышают доходы.")
 
+    # 2. Финансовая подушка (cushion_ratio). Влияние: от -20 до +15
     cush = feats["cushion_ratio"]
     if cush >= 1.0:
         raw_score += 15.0
-        positive_signals.append("Надежная финансовая подушка (остатка хватит более чем на месяц расходов).")
+        positive_signals.append("Надежная подушка безопасности (хватит более чем на месяц).")
     elif cush >= 0.3:
         raw_score += 5.0
+    elif cush < 0.1:
+        raw_score -= 20.0
+        risk_factors.append("Критически низкий или нулевой остаток на конец периода.")
     else:
         raw_score -= 10.0
-        risk_factors.append("Отсутствие ликвидного резерва на конец периода.")
+        risk_factors.append("Отсутствие достаточного ликвидного резерва.")
+
+    # 3. Базовые потребности (essential_ratio). Влияние: от -15 до +10
+    ess = feats["essential_ratio"]
+    if 0.30 <= ess <= 0.65:
+        raw_score += 10.0
+        positive_signals.append("Сбалансированная доля расходов на базовые нужды.")
+    elif ess > 0.85:
+        raw_score -= 15.0
+        risk_factors.append("Критическая доля базовых трат: высокий риск при падении доходов.")
+
+    # 4. Развлечения (discretionary_ratio). Влияние: от -15 до +10
+    disc = feats["discretionary_ratio"]
+    if disc > 0.40:
+        raw_score -= 15.0
+        risk_factors.append("Чрезмерные траты на развлечения и необязательные покупки.")
+    elif disc < 0.20:
+        raw_score += 10.0
+        positive_signals.append("Разумный контроль необязательных расходов.")
+
+    # 5. Регулярность доходов. Влияние: от -20 до +15
+    num_inc = feats["num_incomes"]
+    std = feats["income_interval_std"]
+    avg_int = feats["avg_income_interval"]
+
+    if num_inc < 2:
+        raw_score -= 20.0
+        risk_factors.append("Разовый или нерегулярный характер доходов (менее 2 поступлений).")
+    else:
+        if std < 7.0 and 10.0 <= avg_int <= 35.0:
+            raw_score += 15.0
+            positive_signals.append("Стабильные регулярные поступления (зарплатный паттерн).")
+        elif std < 15.0:
+            raw_score += 5.0
+        elif avg_int < 10.0 and std > 10.0:
+            raw_score -= 10.0
+            risk_factors.append("Хаотичные частые поступления (возможна нестабильная занятость).")
 
     final_score = int(np.clip(round(raw_score), 0, 100))
 
-    stability_score = int(np.clip(round((min(cfr, 1.5) / 1.5) * 5.0 + (10.0 / max(feats["income_interval_std"], 1.0)) * 5.0), 0, 10))
+    stability_score = int(np.clip(round((min(cfr, 1.5) / 1.5) * 5.0 + (10.0 / max(std, 1.0)) * 5.0), 0, 10))
     financial_literacy_score = int(np.clip(round((1.0 - min(disc, 1.0)) * 5.0 + min(cush, 1.0) * 5.0), 0, 10))
     responsibility_score = int(np.clip(round((final_score / 100.0) * 7.0 + (3.0 if not risk_factors else 0.0)), 0, 10))
 
     report_content = (
         f"Анализ транзакций: Доходы {feats['income']:,.0f} руб., Расходы {feats['expenses']:,.0f} руб. "
-        f"Коэффициент покрытия: {cfr:.2f}. Средний интервал доходов: {feats['avg_income_interval']:.1f} дн. "
+        f"Коэффициент покрытия: {cfr:.2f}. Средний интервал доходов: {avg_int:.1f} дн. "
         f"Текущий остаток покрывает {cush:.2f} мес. расходов. Итог алгоритма: {final_score}/100."
     )
 
@@ -164,6 +181,12 @@ def score_statement(statement: ParsedBankStatement) -> StatementScoringResult:
         "responsibility_score": responsibility_score,
         "report_content": report_content,
     }
+
+
+def score_statement(statement: ParsedBankStatement) -> StatementScoringResult:
+    feats = calculate_statement_features(statement)
+    return calculate_score_from_features(feats)
+
 
 
 '''
