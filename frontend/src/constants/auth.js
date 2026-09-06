@@ -23,6 +23,15 @@ export const PASSWORD_RULES = [
 
 export const PHONE_MASK = '+7(XXX)XXX-XX-XX'
 
+// Идентификатор сотрудника (AUTH-011): одна англ. буква + 3 цифры + literal
+// "room19" (например "A123room19"). Проверка формата на фронте до отправки,
+// сам идентификатор — не секрет доступа, а часть проверки принадлежности к команде.
+export const EMPLOYEE_IDENTIFIER = {
+  pattern: /^[A-Za-z][0-9]{3}room19$/,
+  isValid: (value) => EMPLOYEE_IDENTIFIER.pattern.test(value.trim()),
+  format: (value) => value.slice(0, 10),
+}
+
 export const TELEGRAM = {
   isValid: (value) => /^@[A-Za-z0-9_]+$/.test(value.trim()),
   format: (value) => {

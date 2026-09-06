@@ -4,6 +4,7 @@ import Landing from './components/Landing'
 import Login from './components/Login'
 import LoginWork from './components/LoginWork'
 import Registration from './components/Registration'
+import RegistrationWork from './components/RegistrationWork'
 import UserNew from './components/UserNew'
 import UserMy from './components/UserMy'
 import UserSettings from './components/UserSettings'
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registration" element={<Registration />} />
+            <Route path="/registrationWork" element={<RegistrationWork />} />
             <Route path="/loginWork" element={<LoginWork />} />
             <Route element={<RequireAuth />}>
               <Route path="/user/settings" element={<UserSettings />} />

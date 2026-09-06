@@ -155,7 +155,7 @@ export default function LoginWork() {
         <div className="loginwork-card__links">
           <p className="loginwork-card__no-account">
             {t('loginWork.noAccount')}{' '}
-            <Link className="loginwork-card__link" to="/registration">
+            <Link className="loginwork-card__link" to="/registrationWork">
               {t('loginWork.registerLink')}
             </Link>
           </p>

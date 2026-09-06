@@ -1,0 +1,243 @@
+@font-face {
+  font-family: "RockStar";
+  src: url("/fonts/RS-regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+.registrationwork-page {
+  --bg-page: #F8F7F2;
+  --card: #FFFFFF;
+  --text: #191919;
+  --text-muted: #6E7168;
+  --border: #E6E3D9;
+  --accent: #51B38A;
+  --accent-hover: #3E8F6D;
+  --error: #C1584A;
+  --card-radius: 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px 16px;
+  background: var(--bg-page);
+}
+
+.registrationwork-page__inner {
+  display: flex;
+  align-items: stretch;
+  gap: 4rem;
+  max-width: 1164px;
+  width: 100%;
+}
+
+.registrationwork-page__illustration {
+  flex: 0 0 660px;
+  min-width: 0;
+  border-radius: var(--card-radius);
+  object-fit: cover;
+}
+
+@media (max-width: 1224px) {
+  .registrationwork-page__illustration {
+    display: none;
+  }
+}
+
+.registrationwork-card {
+  flex: 0 0 440px;
+  min-width: 440px;
+  max-height: 80vh;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  padding: 48px 40px 40px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.registrationwork-card__logo {
+  font-family: "RockStar", "Inter", Arial, sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 36px;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.registrationwork-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.registrationwork-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.registrationwork-field__label {
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--text-muted);
+}
+
+.registrationwork-field__input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 200;
+  color: var(--text);
+  background: #FFFFFF;
+  border: 1px solid #1C201D;
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.registrationwork-field__input::placeholder {
+  color: var(--text-muted);
+}
+
+.registrationwork-field__input:focus {
+  border-color: var(--accent-hover);
+}
+
+.registrationwork-field__input--error {
+  border-color: var(--error);
+}
+
+.registrationwork-field__wrap {
+  position: relative;
+}
+
+.registrationwork-field__wrap .registrationwork-field__input--password {
+  padding-right: 56px;
+}
+
+.registrationwork-field__toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.registrationwork-field__toggle:hover {
+  color: var(--text);
+}
+
+.registrationwork-field__eye--closed {
+  display: none;
+}
+
+.registrationwork-field__toggle--visible .registrationwork-field__eye--open {
+  display: none;
+}
+
+.registrationwork-field__toggle--visible .registrationwork-field__eye--closed {
+  display: block;
+}
+
+.registrationwork-field__hint {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.registrationwork-field__hint li {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.registrationwork-field__hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.registrationwork-field__hint--ok .registrationwork-field__hint-icon {
+  color: var(--accent);
+}
+
+.registrationwork-field__hint--ok {
+  color: var(--accent);
+}
+
+.registrationwork-field__error {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--error);
+}
+
+.registrationwork-form__submit {
+  width: 100%;
+  height: 52px;
+  margin-top: 12px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 200;
+  color: #FFFFFF;
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.registrationwork-form__submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.registrationwork-form__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.registrationwork-card__login {
+  margin-top: 20px;
+  width: 100%;
+  font-size: 14px;
+  line-height: 18px;
+  color: var(--text-muted);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.registrationwork-card__login-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.registrationwork-card__login-link:hover {
+  text-decoration: underline;
+}
