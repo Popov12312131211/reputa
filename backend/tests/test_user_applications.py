@@ -102,8 +102,8 @@ class TestUserApplicationList:
     def test_lists_only_current_users_applications(self):
         # Чужая заявка (user_id=2) должна отсекаться фильтром по текущему пользователю.
         rows = [
-            self._make_application(app_id=10, user_id=1),
-            self._make_application(app_id=11, user_id=2),
+            self._make_application(app_id="a1b2c3d4e5f6", user_id=1),
+            self._make_application(app_id="b2c3d4e5f607", user_id=2),
         ]
         app.dependency_overrides[get_db] = lambda: ListFakeDb(rows)
         app.dependency_overrides[get_current_user] = lambda: _user(1)
@@ -113,7 +113,7 @@ class TestUserApplicationList:
         )
         assert resp.status_code == 200
         body = resp.json()
-        assert [row["id"] for row in body] == [10]
+        assert [row["id"] for row in body] == ["a1b2c3d4e5f6"]
 
     def test_unauthenticated_returns_401(self):
         app.dependency_overrides[get_db] = lambda: ListFakeDb([])
@@ -138,7 +138,7 @@ class TestUserApplicationDetail:
 
     def _make_application(self, user_id=1):
         return Application(
-            id=10,
+            id="a1b2c3d4e5f6",
             user_id=user_id,
             amount=Decimal("100000.00"),
             purpose="Покупка ноутбука",
@@ -149,7 +149,7 @@ class TestUserApplicationDetail:
             created_at=datetime(2026, 9, 1, 12, 0, 0),
         )
 
-    def _get(self, application_id=10, db=None, user=None):
+    def _get(self, application_id="a1b2c3d4e5f6", db=None, user=None):
         if db is not None:
             self._set_db(db)
         self._set_user(user)
@@ -163,7 +163,7 @@ class TestUserApplicationDetail:
         resp = self._get(db=db, user=_user(1))
         assert resp.status_code == 200
         body = resp.json()
-        assert body["id"] == 10
+        assert body["id"] == "a1b2c3d4e5f6"
         assert body["user_id"] == 1
         assert body["full_name"] == "Иванов Иван Иванович"
         assert body["amount"] == "100000.00"
@@ -179,7 +179,7 @@ class TestUserApplicationDetail:
 
     def test_nonexistent_application_returns_404(self):
         db = FakeDb([self._make_application(user_id=1)])
-        resp = self._get(application_id=999, db=db, user=_user(1))
+        resp = self._get(application_id="zzzz999999", db=db, user=_user(1))
         assert resp.status_code == 404
 
     def test_unauthenticated_returns_401(self):
@@ -187,5 +187,5 @@ class TestUserApplicationDetail:
         # которая без cookie вернёт 401 ещё до чтения данных.
         self._set_db(FakeDb([self._make_application(user_id=1)]))
         app.dependency_overrides.pop(get_current_user, None)
-        resp = self.client.get("/user/applications/10")
+        resp = self.client.get("/user/applications/a1b2c3d4e5f6")
         assert resp.status_code == 401

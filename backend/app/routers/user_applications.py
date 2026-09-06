@@ -32,7 +32,7 @@ def list_applications(
 
 @router.get("/{application_id}", response_model=ApplicationDetailResponse)
 def get_application(
-    application_id: int,
+    application_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

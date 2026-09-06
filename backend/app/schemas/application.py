@@ -70,7 +70,7 @@ class ApplicationDecisionRequest(BaseModel):
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: str
     user_id: int
     amount: Decimal
     purpose: str
