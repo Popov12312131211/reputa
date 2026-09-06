@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useBlocker } from 'react-router-dom'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import { Pencil, Eye, EyeOff } from 'lucide-react'
-import { getJSON, putJSON } from '../api'
+import { getJSON, postJSON, patchJSON, putJSON, deleteJSON } from '../api'
+import { useAuth } from '../contexts/AuthContext'
 import { PHONE, PHONE_MASK, PASSWORD_RULES, TELEGRAM } from '../constants/auth'
 import { THRESHOLD } from '../constants/threshold'
 import { formatPhone, phoneIsValid, requiredIsValid } from '../utils/validators'
@@ -11,14 +12,12 @@ import './EmployeeSettings.css'
 // Маска для read-only отображения полей пароля.
 const MASK_PASSWORD = '••••••••'
 
-// Мок текущих значений профиля сотрудника: реального сохранения на бэкенд
-// пока нет (EMP-001 — только frontend), поэтому поля инициализированы
-// заглушкой по типу APP-006/UserSettings.
-const MOCK_PROFILE = {
-  fullName: 'Петров Пётр Петрович',
-  login: 'PetrPetrov1995',
-  telegram: '@petr_petrov',
-  phone: '+7(900)123-45-67',
+// Пустой профиль — стартовое значение до загрузки с бэкенда GET /auth/profile.
+const EMPTY_PROFILE = {
+  fullName: '',
+  login: '',
+  telegram: '',
+  phone: '',
 }
 
 const ICON_SIZE = 18
@@ -32,16 +31,47 @@ function toThresholdNumber(value) {
 
 export default function EmployeeSettings() {
   const { t } = useTranslation()
+  const { clearSession } = useAuth()
+  const navigate = useNavigate()
+
+  const [loadError, setLoadError] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   // savedValues — «сохранённый» снимок: по нему считаются несохранённые
   // изменения (dirty) и происходит отмена правок при выходе из режима
   // редактирования карандашом (тот же паттерн, что в UserSettings).
   const [savedValues, setSavedValues] = useState({
-    ...MOCK_PROFILE,
+    ...EMPTY_PROFILE,
     password: '',
     passwordConfirm: '',
   })
   const [values, setValues] = useState(savedValues)
+
+  // Загрузка текущего профиля с бэкенда при монтировании.
+  useEffect(() => {
+    let cancelled = false
+    getJSON('/api/auth/profile').then((res) => {
+      if (cancelled) return
+      if (!res.ok || !res.data) {
+        setLoadError(true)
+        return
+      }
+      const loaded = {
+        fullName: res.data.full_name,
+        login: res.data.login,
+        telegram: res.data.telegram,
+        phone: formatPhone(res.data.phone.replace(/\D/g, '')),
+        password: '',
+        passwordConfirm: '',
+      }
+      setValues(loaded)
+      setSavedValues(loaded)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Какое поле (или пара полей пароля — общий ключ password) сейчас
   // в режиме редактирования. По умолчанию всё read-only.
@@ -148,21 +178,52 @@ export default function EmployeeSettings() {
     setVisible((prev) => ({ ...prev, [field]: !prev[field] }))
   }
 
-  // Сохранение профиля — заглушка (backend EMP-001 не подключён): фиксируем
-  // снимок, dirty обнуляется, кнопка «Сохранить» исчезает.
-  function handleSave() {
-    if (!formValid) return
-    console.log('save employee profile (заглушка)')
+  // Сохранение профиля: PATCH /api/auth/profile (APP-006B — реальный бэкенд).
+  // Пароль отправляется только если пользователь его менял; остальные поля —
+  // всегда. Телефон приводится к формату бэкенда +79991234567 (как в регистрации).
+  async function handleSave() {
+    if (!formValid || saving) return
+    setSaving(true)
+    setSaveError('')
+
+    const passwordDirty =
+      values.password !== savedValues.password ||
+      values.passwordConfirm !== savedValues.passwordConfirm
+    const body = {
+      full_name: values.fullName.trim(),
+      login: values.login.trim(),
+      phone: `+${values.phone.replace(/\D/g, '')}`,
+      telegram: values.telegram.trim(),
+      password: passwordDirty ? values.password : null,
+    }
+
+    const res = await patchJSON('/api/auth/profile', body)
+    setSaving(false)
+
+    if (!res.ok) {
+      setSaveError(res.error || t('employeeSettings.profileSaveError'))
+      return
+    }
+
     setSavedValues({ ...values })
     setTouched({})
+    setSaveError('')
   }
 
-  function handleDeleteAccount() {
-    console.log('delete account (заглушка)')
+  async function handleLogout() {
+    // Сбрасываем dirty заранее, чтобы on-beforeunload/useBlocker не перехватили
+    // переход на /loginWork после успешного выхода.
+    setSavedValues({ ...values })
+    await postJSON('/api/auth/logout', {})
+    clearSession()
+    navigate('/loginWork', { replace: true })
   }
 
-  function handleLogout() {
-    console.log('logout (заглушка)')
+  async function handleDeleteAccount() {
+    setSavedValues({ ...values })
+    await deleteJSON('/api/auth/delete')
+    clearSession()
+    navigate('/loginWork', { replace: true })
   }
 
   // Блок «Автоматизация» — реальная логика EMP-002: пороги читаются и
@@ -244,6 +305,8 @@ export default function EmployeeSettings() {
     <div className="employeesettings-page">
       <div className="employeesettings-page__inner">
         <h1 className="employeesettings-page__title">{t('employeeSettings.title')}</h1>
+
+        {loadError && <p className="employeesettings-field__error">{t('employeeSettings.profileLoadError')}</p>}
 
         <section className="employeesettings-card">
           <h2 className="employeesettings-card__subtitle">{t('employeeSettings.basicTitle')}</h2>
@@ -566,12 +629,13 @@ export default function EmployeeSettings() {
         <button
           className="employeesettings-save"
           type="button"
-          disabled={!formValid}
+          disabled={!formValid || saving}
           onClick={handleSave}
         >
-          {t('employeeSettings.save')}
+          {saving ? t('employeeSettings.saving') : t('employeeSettings.save')}
         </button>
       )}
+      {saveError && !dirty && <p className="employeesettings-field__error">{saveError}</p>}
 
       {blocker.state === 'blocked' && (
         <div className="employeesettings-confirm">

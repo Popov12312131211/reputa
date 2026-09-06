@@ -45,4 +45,9 @@ class User(Base):
         # Две FK-колонки applications ведут на users.id: user_id (автор) и
         # decided_by (решивший сотрудник), поэтому join уточняем явно.
         foreign_keys="Application.user_id",
+        # Каскад удаления заявок выполняет сама БД (users.id -> applications.user_id
+        # объявлен с ON DELETE CASCADE). Без passive_deletes SQLAlchemy пытался бы
+        # обнулить user_id у заявок перед удалением пользователя — а колонка NOT NULL,
+        # что падало бы с IntegrityError при удалении аккаунта.
+        passive_deletes=True,
     )
