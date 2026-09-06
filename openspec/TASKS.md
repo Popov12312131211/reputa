@@ -193,6 +193,6 @@
 
 ## Технический долг / чистка
 
-- [ ] **CLEAN-001** — Убрать BOM (U+FEFF) из `backend/app/scoring/stmt_parser.py` и `backend/app/scoring/stmt_scoring.py`
+- [x] **CLEAN-001** — Убрать BOM (U+FEFF) из `backend/app/scoring/stmt_parser.py` и `backend/app/scoring/stmt_scoring.py`
 
   Файлы начинаются с байта U+FEFF (BOM), оставшегося после merge-конфликтов. Загрузке и тестам не мешает (Python его игнорирует), но это мусор в начале файла. Пересохранить оба файла без BOM и убедиться, что `tests/test_statement_parser.py` и остальной набор pytest продолжают проходить.
