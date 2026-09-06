@@ -12,17 +12,17 @@ from app.core.constants import (
     APPLICATION_STATUS_IN_QUEUE,
     AUTO_APPROVE_THRESHOLD_DEFAULT,
     AUTO_REJECT_THRESHOLD_DEFAULT,
-    THRESHOLD_SETTINGS_ID,
+    ROLE_EMPLOYEE,
     SCORE_MIN,
     SCORE_MAX,
 )
 from app.models.application import Application
-from app.models.threshold_settings import ThresholdSettings
+from app.models.employee_thresholds import EmployeeThresholds
 from app.models.user import User, UserRole
 from app.services.auto_processing import (
     apply_auto_decision,
     decide_auto_status,
-    get_threshold_settings,
+    get_employee_thresholds,
 )
 
 
@@ -37,19 +37,24 @@ def _make_db():
     return engine, session
 
 
-def _make_application(db, score=None, login="ivan"):
+def _make_user(db, login="employee", role=UserRole.EMPLOYEE.value):
     user = User(
-        full_name="Иван Петров",
-        birth_date=date(1995, 5, 20),
+        full_name="Пётр Сотрудников",
+        birth_date=date(1990, 1, 1),
         login=login,
         password_hash="hash",
         phone="+79990000000",
-        telegram="@ivan",
-        role=UserRole.USER.value,
+        telegram=f"@{login}",
+        role=role,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+    return user
+
+
+def _make_application(db, score=None, user_login="ivan"):
+    user = _make_user(db, login=user_login, role=UserRole.USER.value)
     application = Application(
         user_id=user.id,
         amount=Decimal("50000.00"),
@@ -66,8 +71,8 @@ def _make_application(db, score=None, login="ivan"):
 
 
 def _settings(reject=AUTO_REJECT_THRESHOLD_DEFAULT, approve=AUTO_APPROVE_THRESHOLD_DEFAULT):
-    return ThresholdSettings(
-        id=THRESHOLD_SETTINGS_ID,
+    return EmployeeThresholds(
+        user_id=1,
         auto_reject_threshold=reject,
         auto_approve_threshold=approve,
     )
@@ -108,15 +113,16 @@ class TestDecideAutoStatus:
         assert decide_auto_status(60, _settings(40, 60)) == APPLICATION_STATUS_AUTO_APPROVED
 
 
-class TestGetThresholdSettings:
+class TestGetEmployeeThresholds:
     def test_creates_defaults_on_empty_table(self):
         engine, db = _make_db()
         try:
-            settings = get_threshold_settings(db)
-            assert settings.id == THRESHOLD_SETTINGS_ID
+            employee = _make_user(db)
+            settings = get_employee_thresholds(db, employee)
+            assert settings.user_id == employee.id
             assert settings.auto_reject_threshold == AUTO_REJECT_THRESHOLD_DEFAULT
             assert settings.auto_approve_threshold == AUTO_APPROVE_THRESHOLD_DEFAULT
-            assert db.query(ThresholdSettings).count() == 1
+            assert db.query(EmployeeThresholds).count() == 1
         finally:
             db.close()
             engine.dispose()
@@ -124,30 +130,44 @@ class TestGetThresholdSettings:
     def test_returns_existing_row(self):
         engine, db = _make_db()
         try:
-            db.add(ThresholdSettings(
-                id=THRESHOLD_SETTINGS_ID,
+            employee = _make_user(db)
+            db.add(EmployeeThresholds(
+                user_id=employee.id,
                 auto_reject_threshold=40,
                 auto_approve_threshold=60,
             ))
             db.commit()
 
-            settings = get_threshold_settings(db)
+            settings = get_employee_thresholds(db, employee)
             assert settings.auto_reject_threshold == 40
             assert settings.auto_approve_threshold == 60
-            assert db.query(ThresholdSettings).count() == 1
+            assert db.query(EmployeeThresholds).count() == 1
         finally:
             db.close()
             engine.dispose()
+
+
+def _make_employee_with_thresholds(db, login, reject, approve):
+    employee = _make_user(db, login=login, role=UserRole.EMPLOYEE.value)
+    db.add(EmployeeThresholds(
+        user_id=employee.id,
+        auto_reject_threshold=reject,
+        auto_approve_threshold=approve,
+    ))
+    db.commit()
+    return employee
 
 
 class TestApplyAutoDecision:
     def test_auto_rejects_low_score(self):
         engine, db = _make_db()
         try:
+            _make_employee_with_thresholds(db, "emp1", 30, 70)
             application = _make_application(db, score=15)
             status = apply_auto_decision(db, application)
             assert status == APPLICATION_STATUS_AUTO_REJECTED
             assert application.status == APPLICATION_STATUS_AUTO_REJECTED
+            assert application.decided_by is not None
         finally:
             db.close()
             engine.dispose()
@@ -155,10 +175,12 @@ class TestApplyAutoDecision:
     def test_auto_approves_high_score(self):
         engine, db = _make_db()
         try:
+            _make_employee_with_thresholds(db, "emp1", 30, 70)
             application = _make_application(db, score=88)
             status = apply_auto_decision(db, application)
             assert status == APPLICATION_STATUS_AUTO_APPROVED
             assert application.status == APPLICATION_STATUS_AUTO_APPROVED
+            assert application.decided_by is not None
         finally:
             db.close()
             engine.dispose()
@@ -166,10 +188,12 @@ class TestApplyAutoDecision:
     def test_middle_score_stays_in_queue(self):
         engine, db = _make_db()
         try:
+            _make_employee_with_thresholds(db, "emp1", 30, 70)
             application = _make_application(db, score=55)
             status = apply_auto_decision(db, application)
             assert status == APPLICATION_STATUS_IN_QUEUE
             assert application.status == APPLICATION_STATUS_IN_QUEUE
+            assert application.decided_by is None
         finally:
             db.close()
             engine.dispose()
@@ -177,31 +201,156 @@ class TestApplyAutoDecision:
     def test_without_score_keeps_status(self):
         engine, db = _make_db()
         try:
+            _make_employee_with_thresholds(db, "emp1", 30, 70)
             application = _make_application(db, score=None)
             status = apply_auto_decision(db, application)
             assert status is None
             assert application.status == APPLICATION_STATUS_IN_QUEUE
+            assert application.decided_by is None
         finally:
             db.close()
             engine.dispose()
 
-    def test_custom_thresholds_used_from_db(self):
+    def test_no_employees_stays_in_queue(self):
         engine, db = _make_db()
         try:
-            db.add(ThresholdSettings(
-                id=THRESHOLD_SETTINGS_ID,
-                auto_reject_threshold=40,
-                auto_approve_threshold=60,
-            ))
-            db.commit()
-
-            low = _make_application(db, score=20, login="ivan")
-            middle = _make_application(db, score=55, login="petr")
-            high = _make_application(db, score=65, login="sidor")
-
-            assert apply_auto_decision(db, low) == APPLICATION_STATUS_AUTO_REJECTED
-            assert apply_auto_decision(db, middle) == APPLICATION_STATUS_IN_QUEUE
-            assert apply_auto_decision(db, high) == APPLICATION_STATUS_AUTO_APPROVED
+            application = _make_application(db, score=15)
+            status = apply_auto_decision(db, application)
+            assert status == APPLICATION_STATUS_IN_QUEUE
+            assert application.status == APPLICATION_STATUS_IN_QUEUE
+            assert application.decided_by is None
         finally:
             db.close()
             engine.dispose()
+
+    def test_skips_employee_whose_thresholds_do_not_match(self):
+        engine, db = _make_db()
+        try:
+            # Первый сотрудник не подпадает под персональные пороги средней
+            # оценки, второй — подпадает, и сделку закрывает именно он
+            # (независимо от случайного порядка перебора — только он матчится).
+            app_score = 45
+            first = _make_employee_with_thresholds(db, "emp1", 20, 90)
+            second = _make_employee_with_thresholds(db, "emp2", 30, 44)
+
+            application = _make_application(db, score=app_score)
+            status = apply_auto_decision(db, application)
+            assert status == APPLICATION_STATUS_AUTO_APPROVED
+            assert application.decided_by == second.id
+            assert application.decided_by != first.id
+        finally:
+            db.close()
+            engine.dispose()
+
+    def test_first_matching_employee_wins(self):
+        engine, db = _make_db()
+        try:
+            # Под пороги попадает только один сотрудник — он и фиксируется
+            # как решивший, вне зависимости от порядка случайного перебора.
+            app_score = 45
+            first = _make_employee_with_thresholds(db, "emp1", 30, 44)
+            second = _make_employee_with_thresholds(db, "emp2", 10, 90)
+
+            application = _make_application(db, score=app_score)
+            status = apply_auto_decision(db, application)
+            assert status == APPLICATION_STATUS_AUTO_APPROVED
+            assert application.decided_by == first.id
+        finally:
+            db.close()
+            engine.dispose()
+
+    def test_none_matching_stays_in_queue(self):
+        engine, db = _make_db()
+        try:
+            # Персональные пороги обоих сотрудников не покрывают средний балл —
+            # заявка остаётся в очереди даже при наличии сотрудников.
+            app_score = 45
+            _make_employee_with_thresholds(db, "emp1", 20, 90)
+            _make_employee_with_thresholds(db, "emp2", 10, 90)
+
+            application = _make_application(db, score=app_score)
+            status = apply_auto_decision(db, application)
+            assert status == APPLICATION_STATUS_IN_QUEUE
+            assert application.decided_by is None
+        finally:
+            db.close()
+            engine.dispose()
+
+    def test_rejects_with_decided_employee_recorded(self):
+        engine, db = _make_db()
+        try:
+            employee = _make_employee_with_thresholds(db, "emp1", 40, 60)
+            application = _make_application(db, score=20)
+            status = apply_auto_decision(db, application)
+            assert status == APPLICATION_STATUS_AUTO_REJECTED
+            assert application.decided_by == employee.id
+        finally:
+            db.close()
+            engine.dispose()
+
+    def test_does_not_touch_already_decided_application(self):
+        engine, db = _make_db()
+        try:
+            employee = _make_employee_with_thresholds(db, "emp1", 30, 70)
+            application = _make_application(db, score=88)
+            application.status = "employee_approved"
+            application.decided_by = employee.id
+            db.commit()
+
+            status = apply_auto_decision(db, application)
+            assert status == "employee_approved"
+            assert application.status == "employee_approved"
+            assert application.decided_by == employee.id
+        finally:
+            db.close()
+            engine.dispose()
+
+    def test_clears_stale_decided_by_when_no_match(self):
+        engine, db = _make_db()
+        try:
+            employee = _make_employee_with_thresholds(db, "emp1", 20, 90)
+            application = _make_application(db, score=45)
+            application.decided_by = employee.id
+            db.commit()
+
+            status = apply_auto_decision(db, application)
+            assert status == APPLICATION_STATUS_IN_QUEUE
+            assert application.status == APPLICATION_STATUS_IN_QUEUE
+            assert application.decided_by is None
+        finally:
+            db.close()
+            engine.dispose()
+
+
+class _KeepOrder:
+    @staticmethod
+    def shuffle(items):
+        pass
+
+
+class _ReverseOrder:
+    @staticmethod
+    def shuffle(items):
+        items.reverse()
+
+
+class TestApplyAutoDecisionOrder:
+    def test_rng_controls_winner_when_two_employees_match(self):
+        # Оба сотрудника матчатся (первый — на approve, второй — на reject),
+        # побеждает тот, кто оказался первым после shuffle.
+        for rng, expected_status, expected_login in (
+            (_KeepOrder, APPLICATION_STATUS_AUTO_APPROVED, "emp1"),
+            (_ReverseOrder, APPLICATION_STATUS_AUTO_REJECTED, "emp2"),
+        ):
+            engine, db = _make_db()
+            try:
+                first = _make_employee_with_thresholds(db, "emp1", 30, 40)
+                second = _make_employee_with_thresholds(db, "emp2", 60, 70)
+                application = _make_application(db, score=50)
+                status = apply_auto_decision(db, application, rng=rng)
+                assert status == expected_status
+                expected_id = first.id if expected_login == "emp1" else second.id
+                assert application.decided_by == expected_id
+            finally:
+                db.close()
+                engine.dispose()
