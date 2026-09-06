@@ -107,7 +107,13 @@ export default function UserNew() {
                 onBlur={() => setTouched((prev) => ({ ...prev, amount: true }))}
               />
               {touched.amount && !amountValid && (
-                <span className="usernew-field__error">{t('userNew.amountHint')}</span>
+                <span className="usernew-field__error">
+                  {amount.trim() === '' || !Number.isFinite(amountNum)
+                    ? t('userNew.amountHintEmpty')
+                    : amountNum < AMOUNT.MIN
+                      ? t('userNew.amountHintMin')
+                      : t('userNew.amountHintMax')}
+                </span>
               )}
             </div>
 

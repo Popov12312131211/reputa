@@ -5,7 +5,8 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.core.constants import (
-    AMOUNT_MIN_VALUE,
+    AMOUNT_MAX,
+    AMOUNT_MIN,
     PURPOSE_MAX_LENGTH,
     TELEGRAM_CHANNEL_MAX_LENGTH,
     TELEGRAM_MAX_LENGTH,
@@ -23,8 +24,10 @@ class ApplicationCreate(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, v: Decimal) -> Decimal:
-        if v <= AMOUNT_MIN_VALUE:
-            raise ValueError("Сумма должна быть больше нуля")
+        if v < AMOUNT_MIN:
+            raise ValueError(f"Минимальная сумма — {AMOUNT_MIN:,}".replace(",", " "))
+        if v > AMOUNT_MAX:
+            raise ValueError(f"Максимальная сумма — {AMOUNT_MAX:,}".replace(",", " "))
         return v
 
     @field_validator("purpose")

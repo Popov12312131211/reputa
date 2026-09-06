@@ -227,6 +227,24 @@ class TestCreateApplicationEndpoint:
         assert resp.status_code == 422
         assert db.committed is False
 
+    def test_create_application_amount_below_min_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"amount": "500"})
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_create_application_amount_above_max_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"amount": "20000000"})
+        assert resp.status_code == 422
+        assert db.committed is False
+
     def test_create_application_purpose_blank_returns_422(self):
         db = _mock_db()
         self._set_db(db)
@@ -374,6 +392,24 @@ class TestApplicationCreateValidation:
         with pytest.raises(ValidationError):
             ApplicationCreate(
                 amount=Decimal("-1"),
+                purpose="Ремонт",
+                telegram="@ivan",
+                telegram_channel="@ivan_channel",
+            )
+
+    def test_amount_below_min_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("500"),
+                purpose="Ремонт",
+                telegram="@ivan",
+                telegram_channel="@ivan_channel",
+            )
+
+    def test_amount_above_max_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("20000000"),
                 purpose="Ремонт",
                 telegram="@ivan",
                 telegram_channel="@ivan_channel",
