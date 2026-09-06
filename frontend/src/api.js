@@ -90,12 +90,54 @@ export async function putJSON(url, body) {
     credentials: 'include',
     body: JSON.stringify(body),
   })
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    // не-JSON ответ — расцениваем как обычную сетевую ошибку ниже
+  }
+
+  if (!res.ok) {
+    return { ok: false, error: extractError(data) }
+  }
+  return { ok: true, data }
+}
+
+// PATCH-запрос (напр. обновление профиля). Логика та же, что у putJSON.
+export async function patchJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  })
 
   let data = null
   try {
     data = await res.json()
   } catch {
     // не-JSON ответ — расцениваем как обычную сетевую ошибку ниже
+  }
+
+  if (!res.ok) {
+    return { ok: false, error: extractError(data) }
+  }
+  return { ok: true, data }
+}
+
+// DELETE-запрос (напр. удаление аккаунта). Успех 204 идёт без тела — data=null,
+// поэтому контракт тот же: { ok: true, data } / { ok: false, error }.
+export async function deleteJSON(url) {
+  const res = await fetch(url, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    // 204/не-JSON ответ
   }
 
   if (!res.ok) {

@@ -28,6 +28,21 @@ from app.services.auth import create_access_token, hash_password, verify_passwor
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _clear_auth_cookie(response: Response) -> None:
+    """Инвалидирует auth-cookie на стороне клиента.
+
+    Паттерн-двойник `_set_auth_cookie`: те же параметры cookie (путь, secure,
+    samesite), но с max_age=0 — браузер немедленно удаляет куку.
+    """
+    response.delete_cookie(
+        key=COOKIE_NAME,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite="lax",
+        path="/",
+    )
+
+
 def _set_auth_cookie(response: Response, user: User) -> None:
     token = create_access_token(user)
     response.set_cookie(
@@ -166,3 +181,34 @@ def employee_login(body: EmployeeLoginRequest, response: Response, db: Session =
 
     _set_auth_cookie(response, user)
     return user
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response, current_user: User = Depends(get_current_user)):
+    """Выход из аккаунта: инвалидирует auth-cookie.
+
+    JWT — stateless, поэтому токен из куки просто удаляется на клиенте
+    (`_clear_auth_cookie` ставит тот же путь/samesite с max_age=0).
+    Response 204 без тела — фронт сбрасывает локальное состояние сессии.
+    """
+    _clear_auth_cookie(response)
+
+
+@router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Удаление аккаунта вместе со всеми данными пользователя.
+
+    Решение по судьбе заявок (APP-006B): каскадное удаление. В схеме БД
+    `applications.user_id` и `score_results.application_id` объявлены с
+    `ON DELETE CASCADE`, поэтому удаление пользователя транзитивно удаляет и
+    его заявки, и результаты скоринга по ним. Для MVP это осознанный выбор:
+    клиент реализует право на забвение (GDPR-стиль), без обезличивания и без
+    запрета удаления при активных заявках.
+    """
+    db.delete(current_user)
+    db.commit()
+    _clear_auth_cookie(response)

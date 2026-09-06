@@ -48,8 +48,13 @@ export function AuthProvider({ children }) {
 
   const role = user && user.role ? user.role : null
 
+  // Сброс локального состояния сессии после выхода или удаления аккаунта.
+  // Фактическое разлогинивание cookie выполняет бэкенд (/auth/logout,
+  // /auth/delete) — здесь только очищаем данные пользователя на фронте.
+  const clearSession = () => setUser(null)
+
   return (
-    <AuthContext.Provider value={{ user, role, loading, setUser }}>
+    <AuthContext.Provider value={{ user, role, loading, setUser, clearSession }}>
       {children}
     </AuthContext.Provider>
   )
