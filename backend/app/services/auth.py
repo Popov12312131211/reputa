@@ -7,6 +7,12 @@ from app.core.config import settings
 from app.core.constants import PWD_SCHEME_BCRYPT
 from app.models.user import User
 
+# Известная безвредная проблема совместимости passlib + bcrypt 4.x:
+# passlib при инициализации обращается к `bcrypt.__about__.__version__`,
+# которого в bcrypt 4.x больше нет, и печатает warning (в docker-логах:
+# "module 'bcrypt' has no attribute '__about__'"). Хеширование/проверка при
+# этом работают корректно, чинить через "обновление passlib" пока не требуется.
+# Не исследуй это заново.
 pwd_context = CryptContext(schemes=[PWD_SCHEME_BCRYPT], deprecated="auto")
 
 

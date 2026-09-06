@@ -8,6 +8,7 @@ from app.core.constants import (
     MSG_INVALID_CREDENTIALS,
     MSG_INVALID_STAFF_CODE,
     MSG_NOT_EMPLOYEE,
+    COOKIE_NAME,
     STAFF_LOGIN_CODE,
 )
 from app.api.deps import get_current_user
@@ -30,7 +31,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def _set_auth_cookie(response: Response, user: User) -> None:
     token = create_access_token(user)
     response.set_cookie(
-        key=settings.ACCESS_TOKEN_COOKIE_NAME,
+        key=COOKIE_NAME,
         value=token,
         httponly=True,
         secure=settings.COOKIE_SECURE,
