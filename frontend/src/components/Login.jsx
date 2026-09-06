@@ -112,6 +112,9 @@ export default function Login() {
           <Link className="login-card__link" to="/forgot">
             {t('login.forgotPassword')}
           </Link>
+          <Link className="login-card__link" to="/loginWork">
+            {t('login.workLoginLink')}
+          </Link>
           <p className="login-card__no-account">
             {t('login.noAccount')}{' '}
             <Link className="login-card__link" to="/registration">

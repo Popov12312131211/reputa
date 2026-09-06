@@ -19,6 +19,7 @@ from app.core.constants import (
     MSG_INVALID_CREDENTIALS,
     MSG_INVALID_STAFF_CODE,
     MSG_NOT_EMPLOYEE,
+    MSG_EMPLOYEE_LOGIN_FORBIDDEN,
     STAFF_LOGIN_CODE,
 )
 from app.services.auth import create_access_token, hash_password
@@ -328,6 +329,20 @@ class TestLoginEndpoint:
     def test_login_empty_password(self):
         resp = self._post(password="")
         assert resp.status_code == 422
+
+    def test_login_employee_forbidden(self):
+        # AUTH-009: сотрудник не входит через обычный /login, даже с верными
+        # логином и паролем — ему доступен только /auth/login/employee.
+        db = _mock_db(
+            existing_login="ivan",
+            password_hash=hash_password(self.PASSWORD),
+            role=UserRole.EMPLOYEE.value,
+        )
+        app.dependency_overrides[get_db] = lambda: db
+        resp = self._post()
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == MSG_EMPLOYEE_LOGIN_FORBIDDEN
+        assert "access_token" not in resp.cookies
 
 
 class TestCreateAccessToken:

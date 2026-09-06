@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.main  # noqa: F401  — регистрирует роутеры и middleware
+from app.core.constants import STAFF_LOGIN_CODE
 from app.db.base import Base
 from app.db.session import get_db
 from app.models.user import UserRole
@@ -76,8 +77,12 @@ class TestAuthMeEndToEnd:
         assert r.status_code == 201
         assert r.json()["role"] == UserRole.EMPLOYEE.value
 
-        # Логин реально ставит httpOnly-cookie.
-        r = client.post("/auth/login", json={"login": "e2e_employee", "password": "Abcdef1!"})
+        # Логин реально ставит httpOnly-cookie. Сотрудник входит только через
+        # /auth/login/employee (AUTH-009 запрещает вход сотрудника через /login).
+        r = client.post(
+            "/auth/login/employee",
+            json={"login": "e2e_employee", "code": STAFF_LOGIN_CODE, "password": "Abcdef1!"},
+        )
         assert r.status_code == 200
         set_cookie = r.headers.get("set-cookie", "")
         assert "access_token=" in set_cookie
