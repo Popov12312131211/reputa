@@ -11,15 +11,15 @@ from pydantic import ValidationError
 from app.main import app
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.models.threshold_settings import ThresholdSettings
+from app.models.employee_thresholds import EmployeeThresholds
 from app.models.user import User, UserRole
 from app.schemas.threshold import ThresholdSettingsUpdate
 from app.services.auth import create_access_token
 
 
 def _settings(reject=30, approve=70):
-    return ThresholdSettings(
-        id=1,
+    return EmployeeThresholds(
+        user_id=1,
         auto_reject_threshold=reject,
         auto_approve_threshold=approve,
     )
@@ -80,14 +80,19 @@ class TestReadThresholdSettings:
     def _set_db(self, db):
         app.dependency_overrides[get_db] = lambda: db
 
+    def _set_user(self, user=None):
+        app.dependency_overrides[get_current_user] = lambda: user or _make_user()
+
     def test_returns_current_thresholds(self):
         db = _FakeDb(settings=_settings(40, 60))
         self._set_db(db)
+        self._set_user()
         self.client.cookies.set("access_token", _token())
 
         resp = self.client.get("/employee/settings")
         assert resp.status_code == 200
         body = resp.json()
+        assert body["id"] == 1
         assert body["auto_reject_threshold"] == 40
         assert body["auto_approve_threshold"] == 60
 
@@ -122,15 +127,20 @@ class TestUpdateThresholdSettings:
     def _set_db(self, db):
         app.dependency_overrides[get_db] = lambda: db
 
+    def _set_user(self, user=None):
+        app.dependency_overrides[get_current_user] = lambda: user or _make_user()
+
     def test_updates_thresholds(self):
         settings = _settings()
         db = _FakeDb(settings=settings)
         self._set_db(db)
+        self._set_user()
         self.client.cookies.set("access_token", _token())
 
         resp = self.client.put("/employee/settings", json={"auto_reject_threshold": 25, "auto_approve_threshold": 75})
         assert resp.status_code == 200
         body = resp.json()
+        assert body["id"] == 1
         assert body["auto_reject_threshold"] == 25
         assert body["auto_approve_threshold"] == 75
         assert settings.auto_reject_threshold == 25

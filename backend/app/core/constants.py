@@ -36,11 +36,11 @@ TELEGRAM_CHANNEL_MAX_LENGTH = 255
 SCORE_MIN = 0
 SCORE_MAX = 100
 
-# Пороговая автообработка (APP-003): дефолтные пороги и id настройки-синглтона.
-# Реальные значения хранятся в таблице threshold_settings и редактируются в EMP-002.
+# Пороговая автообработка (APP-003): дефолтные пороги. С APP-008 пороги
+# персональные для каждого сотрудника (employee_thresholds), хранятся в БД и
+# редактируются в EMP-002; константы ниже — значения по умолчанию.
 AUTO_REJECT_THRESHOLD_DEFAULT = 30
 AUTO_APPROVE_THRESHOLD_DEFAULT = 70
-THRESHOLD_SETTINGS_ID = 1
 
 # Психологический портрет (метрики 0–10)
 PORTRAIT_METRIC_MIN = 0

@@ -5,14 +5,14 @@ from app.api.deps import get_current_user
 from app.core.constants import MSG_APPLICATION_NOT_FOUND
 from app.db.session import get_db
 from app.models.application import Application
-from app.models.threshold_settings import ThresholdSettings
+from app.models.employee_thresholds import EmployeeThresholds
 from app.models.user import User
 from app.schemas.application import (
     ApplicationListItemResponse,
     EmployeeApplicationDetailResponse,
 )
 from app.schemas.threshold import ThresholdSettingsResponse, ThresholdSettingsUpdate
-from app.services.auto_processing import get_threshold_settings
+from app.services.auto_processing import get_employee_thresholds
 
 router = APIRouter(prefix="/employee", tags=["employee"])
 
@@ -84,7 +84,8 @@ def read_threshold_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return get_threshold_settings(db)
+    # EMP-002/APP-008: пороги персональные — читаем настройки текущего сотрудника.
+    return get_employee_thresholds(db, current_user)
 
 
 @router.put("/settings", response_model=ThresholdSettingsResponse)
@@ -93,7 +94,7 @@ def update_threshold_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    settings: ThresholdSettings = get_threshold_settings(db)
+    settings: EmployeeThresholds = get_employee_thresholds(db, current_user)
     settings.auto_reject_threshold = body.auto_reject_threshold
     settings.auto_approve_threshold = body.auto_approve_threshold
     db.commit()
