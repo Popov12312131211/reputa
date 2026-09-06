@@ -8,6 +8,7 @@ from app.core.constants import (
     MSG_INVALID_CREDENTIALS,
     MSG_INVALID_STAFF_CODE,
     MSG_NOT_EMPLOYEE,
+    MSG_EMPLOYEE_LOGIN_FORBIDDEN,
     COOKIE_NAME,
     STAFF_LOGIN_CODE,
 )
@@ -150,6 +151,15 @@ def login(body: LoginRequest, response: Response, db: Session = Depends(get_db))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=MSG_INVALID_CREDENTIALS,
+        )
+
+    # AUTH-009: аккаунт с ролью "сотрудник" не может логиниться через обычный
+    # вход без кода — для него разрешён только /auth/login/employee. Пишем
+    # явную ошибку (403), чтобы фронт мог предложить перейти на вход сотрудника.
+    if user.role == UserRole.EMPLOYEE.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=MSG_EMPLOYEE_LOGIN_FORBIDDEN,
         )
 
     _set_auth_cookie(response, user)

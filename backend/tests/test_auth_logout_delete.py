@@ -14,6 +14,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.main  # noqa: F401  — регистрирует роутеры и middleware
+from app.core.constants import STAFF_LOGIN_CODE
 from app.db.base import Base
 from app.db.session import get_db
 from app.models.application import Application
@@ -78,7 +79,13 @@ def _register_and_login(client, payload=None):
     payload = payload or USER_PAYLOAD
     r = client.post("/auth/register", json=payload)
     assert r.status_code == 201
-    r = client.post("/auth/login", json={"login": payload["login"], "password": payload["password"]})
+    # Первый зарегистрированный в пустой БД пользователь — сотрудник (bootstrap),
+    # поэтому входим через /auth/login/employee. Обычный /login сотруднику
+    # запрещён (AUTH-009).
+    r = client.post(
+        "/auth/login/employee",
+        json={"login": payload["login"], "code": STAFF_LOGIN_CODE, "password": payload["password"]},
+    )
     assert r.status_code == 200
     assert client.cookies.get("access_token")
     return payload
@@ -126,8 +133,8 @@ class TestProfileSettingsEndToEnd:
 
         client.post("/auth/logout")
         r = client.post(
-            "/auth/login",
-            json={"login": "updated_login", "password": "NewPass2!"},
+            "/auth/login/employee",
+            json={"login": "updated_login", "code": STAFF_LOGIN_CODE, "password": "NewPass2!"},
         )
         assert r.status_code == 200
 
@@ -148,8 +155,8 @@ class TestProfileSettingsEndToEnd:
 
         client.post("/auth/logout")
         r = client.post(
-            "/auth/login",
-            json={"login": "logout_user", "password": USER_PAYLOAD["password"]},
+            "/auth/login/employee",
+            json={"login": "logout_user", "code": STAFF_LOGIN_CODE, "password": USER_PAYLOAD["password"]},
         )
         assert r.status_code == 200
 
@@ -181,7 +188,10 @@ class TestLogout:
         client.post("/auth/logout")
 
         # Пользователь остаётся в БД: повторный вход возможен.
-        r = client.post("/auth/login", json={"login": "logout_user", "password": "Abcdef1!"})
+        r = client.post(
+            "/auth/login/employee",
+            json={"login": "logout_user", "code": STAFF_LOGIN_CODE, "password": "Abcdef1!"},
+        )
         assert r.status_code == 200
 
 

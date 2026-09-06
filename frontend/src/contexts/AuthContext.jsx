@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { registerSessionExpiredHandler } from '../api'
 
 export const ROLES = {
   USER: 'user',
@@ -19,6 +20,31 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Текущая роль нужна обработчику «принудительной сессии», чтобы решить, на
+  // какой экран входа уводить (сотрудник — /loginWork, обычный — /login).
+  // Храним в ref, чтобы замыкание всегда видело актуальную роль без
+  // перерегистрации обработчика на каждый рендер.
+  const roleRef = useRef(null)
+  const clearSession = useCallback(() => {
+    roleRef.current = null
+    setUser(null)
+  }, [])
+  const role = user && user.role ? user.role : null
+  roleRef.current = role
+
+  useEffect(() => {
+    // AUTH-009: при истечении/невалидности JWT посреди работы приложение
+    // принудительно разлогинивает пользователя и уводит на экран входа.
+    // Сброс локальной сессии + жёсткий редирект (перезагружает страницу на
+    // /login|/loginWork под свежий cookie) — надёжнее мягкого navigate, т.к.
+    // AuthProvider живёт вне RouterProvider.
+    registerSessionExpiredHandler(() => {
+      const wasEmployee = roleRef.current === ROLES.EMPLOYEE
+      clearSession()
+      window.location.assign(wasEmployee ? '/loginWork' : '/login')
+    })
+  }, [clearSession])
 
   useEffect(() => {
     let cancelled = false
@@ -45,13 +71,6 @@ export function AuthProvider({ children }) {
       cancelled = true
     }
   }, [])
-
-  const role = user && user.role ? user.role : null
-
-  // Сброс локального состояния сессии после выхода или удаления аккаунта.
-  // Фактическое разлогинивание cookie выполняет бэкенд (/auth/logout,
-  // /auth/delete) — здесь только очищаем данные пользователя на фронте.
-  const clearSession = () => setUser(null)
 
   return (
     <AuthContext.Provider value={{ user, role, loading, setUser, clearSession }}>
