@@ -77,6 +77,7 @@ STATEMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024
 STATEMENT_BANK_ALFA = "alfa"
 STATEMENT_BANK_SBER = "sber"
 STATEMENT_BANK_OZON = "ozon"
+STATEMENT_BANK_TBANK = "t-bank"
 
 # Категории операций из структурированной выписки (STMT-001).
 # Поступающие операции отделены от трат: расходы агрегируются по категориям,

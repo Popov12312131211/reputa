@@ -1,3 +1,4 @@
+﻿
 import io
 import re
 from datetime import date, datetime
@@ -19,20 +20,21 @@ from app.core.constants import (
     STATEMENT_BANK_ALFA,
     STATEMENT_BANK_OZON,
     STATEMENT_BANK_SBER,
+    STATEMENT_BANK_TBANK,
 )
 from app.schemas.statement import ParsedBankStatement, StatementTransaction
 
-_DATE_RE = re.compile(r"\d{2}\.\d{2}\.\d{4}")
+_DATE_RE = re.compile(r"\d{2}\.\d{2}\.\d{2,4}")
 
-# Сумма с разделителем тысяч-пробелом, десятичной запятой и необязательным знаком.
-_AMOUNT_RE = r"[+-]?\d{1,3}(?:[ \u00A0]\d{3})*,\d{2}"
+# Сумма с разделителем тысяч-пробелом, десятичной точкой/запятой и необязательным знаком.
+_AMOUNT_RE = r"[+-]?\d{1,3}(?:[ \u00A0]\d{3})*[.,]\d{2}"
 
-# Разновидность суммы без знака для форматов, где знак не печатается
-# (колонка «Сумма» Альфа-Банка и остатки в его шапке).
-_UNSIGNED_AMOUNT_RE = r"-?\s*\d{1,3}(?:[ \u00A0]\d{3})*,\d{2}"
+# Разновидность суммы без знака (колонка «Сумма» Альфа-Банка и остатки).
+_UNSIGNED_AMOUNT_RE = r"-?\s*\d{1,3}(?:[ \u00A0]\d{3})*[.,]\d{2}"
 
 # Альфа-Банк: сумма в конце строки, перед токеном RUR (отрицательная — с минусом).
 _ALFA_AMOUNT_END_RE = re.compile(rf"({_UNSIGNED_AMOUNT_RE})\s+RUR\s*$")
+
 
 # СберБанк, первая строка операции: дата, время, категория, сумма, остаток.
 # Категория «ленивая»: движок откатывается так, чтобы последними шли два числа.
@@ -78,7 +80,8 @@ _KEYWORD_CATEGORIES = (
         (
             "магнит", "пятерочка", "пятёрочка", "перекресток", "перекрёсток",
             "ашан", "вкусвилл", "спар", "дикси", "продукт", "market", "magnit",
-            "pyaterochka", "универсам", "супермаркет", "карусель",
+            "pyaterochka", "универсам", "супермаркет", "карусель", "yarche", "ярче",
+            "krasnoe&beloe", "к&б", "лента", "lenta", "monetka", "монетка", "fixprice",
         ),
     ),
     (
@@ -86,7 +89,7 @@ _KEYWORD_CATEGORIES = (
         (
             "кафе", "ресторан", "кофе", "кебаб", "шаурма", "пицца", "бургер",
             "вкусно и точка", "kebab", "coffee", "kofetochka", "столовая",
-            "свежар", "svezhar", "жар с",
+            "свежар", "svezhar", "жар с", "rostics", "shashlykoff", "dobropek",
         ),
     ),
     (
@@ -140,7 +143,8 @@ class UnsupportedStatementError(StatementParseError):
 
 
 def _parse_date(value: str) -> date:
-    return datetime.strptime(value, "%d.%m.%Y").date()
+    fmt = "%d.%m.%Y" if len(value.split(".")[-1]) == 4 else "%d.%m.%y"
+    return datetime.strptime(value, fmt).date()
 
 
 def _parse_amount(text: str) -> Decimal:
@@ -446,35 +450,71 @@ def _parse_ozon(content: bytes) -> ParsedBankStatement:
         **_summarize(transactions, STATEMENT_BANK_OZON),
     )
 
+def _parse_tbank(lines: list[str]) -> ParsedBankStatement:
+    text = "\n".join(lines)
+    dates = [d for d in re.findall(r"\d{2}\.\d{2}\.\d{2,4}", text) if " " not in d]
+    period_start = _parse_date(dates[0]) if dates else None
+    period_end = _parse_date(dates[-1]) if dates else None
+    
+    balances = re.findall(r"Баланс на.*?(?:\|)?\s*([+-]?\s*\d{1,3}(?:[ \u00A0]\d{3})*[.,]\d{2})\s*[PР]", text)
+    opening_balance = _parse_amount(balances[0]) if balances else Decimal(0)
+    closing_balance = _parse_amount(balances[-1]) if balances else Decimal(0)
+    
+    transactions = []
+    for line in lines:
+        if not re.match(r"^\d{2}\.\d{2}\.\d{2,4}", line):
+            continue
+        amounts = re.findall(rf"{_AMOUNT_RE}\s*[PР]", line)
+        if not amounts:
+            continue
+            
+        amount_str = amounts[-1].replace("P", "").replace("Р", "").strip()
+        amount = _parse_amount(amount_str)
+        
+        desc = re.sub(r"\d{2}\.\d{2}\.\d{2,4}(?: \d{2}:\d{2})?", "", line)
+        desc = re.sub(rf"{_AMOUNT_RE}\s*[PР]", "", desc).replace("|", "").strip()
+        
+        if "+" not in amount_str and "Пополнение" not in desc and "Внесение" not in desc and "Перевод с договора" not in desc:
+            amount = -abs(amount)
+            
+        transactions.append(StatementTransaction(
+            date=_parse_date(line[:8]), description=desc, amount=amount, category=_categorize(desc, amount)
+        ))
+        
+    return ParsedBankStatement(
+        bank="T-Bank", account_number=None, period_start=period_start, period_end=period_end,
+        opening_balance=opening_balance, closing_balance=closing_balance, transactions=transactions,
+        **_summarize(transactions, "T-Bank")
+    )
 
 def detect_bank(content: bytes) -> str:
     joined = "\n".join(_extract_lines(content)).upper()
-    # Банк определяется по реквизитам из шапки/подвала самой выписки. Простые
-    # подстроки («Сбербанк», «Альфа-Банк») встречаются и в описаниях операций
-    # чужой выписки («перевод из ПАО Сбербанк» в Альфа-Банке), поэтому в первую
-    # очередь ищем уточнённые маркеры.
-    if "ООО «ОЗОН БАНК»" in joined:
+    
+    # Используем только строгие юридические названия и точные заголовки, 
+    # чтобы переводы другим банкам внутри списка транзакций не ломали логику.
+    if "ООО «ОЗОН БАНК»" in joined: 
         return STATEMENT_BANK_OZON
-    if "АО «АЛЬФА-БАНК»" in joined:
+        
+    if "АО «АЛЬФА-БАНК»" in joined: 
         return STATEMENT_BANK_ALFA
-    if "СБЕРБАНК ОНЛАЙН" in joined:
+        
+    if "ВЫПИСКА ПО СЧЁТУ ДЕБЕТОВОЙ КАРТЫ" in joined or "ЗАКАЗАНО В СБЕРБАНК ОНЛАЙН" in joined: 
         return STATEMENT_BANK_SBER
-    if "СБЕРБАНК" in joined:
-        return STATEMENT_BANK_SBER
-    if "АЛЬФА-БАНК" in joined:
-        return STATEMENT_BANK_ALFA
-    if "ОЗОН БАНК" in joined:
-        return STATEMENT_BANK_OZON
+        
+    if "ВЫПИСКА ПО ДОГОВОРУ №" in joined or "АКЦИОНЕРНОЕ ОБЩЕСТВО «ТБАНК»" in joined: 
+        return STATEMENT_BANK_TBANK
+        
     raise UnsupportedStatementError("Банк выписки не распознан")
-
 
 def parse_statement(content: bytes, filename: str | None = None) -> ParsedBankStatement:
     bank = detect_bank(content)
+    if bank == STATEMENT_BANK_OZON:
+        return _parse_ozon(content)
     lines = _extract_lines(content)
     if bank == STATEMENT_BANK_ALFA:
         return _parse_alfa(lines)
     if bank == STATEMENT_BANK_SBER:
         return _parse_sber(lines)
-    if bank == STATEMENT_BANK_OZON:
-        return _parse_ozon(content)
+    if bank == STATEMENT_BANK_TBANK:
+        return _parse_tbank(lines)
     raise UnsupportedStatementError(f"Банк выписки не поддерживается: {bank}")
