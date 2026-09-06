@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.core.constants import JWT_COOKIE_NAME, MSG_AUTH_REQUIRED, MSG_EMPLOYEE_REQUIRED, ROLE_EMPLOYEE
+from app.core.constants import MSG_EMPLOYEE_REQUIRED, ROLE_EMPLOYEE
 from app.core.constants import COOKIE_NAME, MSG_NOT_AUTHENTICATED
 from app.db.session import get_db
 from app.models.user import User

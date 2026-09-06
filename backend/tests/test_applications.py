@@ -410,12 +410,6 @@ class TestApplicationCreateValidation:
                 amount=Decimal("1000"),
                 purpose="Ремонт",
                 telegram="@ivan",
-    def test_telegram_channel_without_at_rejected(self):
-        with pytest.raises(ValidationError):
-            ApplicationCreate(
-                amount=Decimal("1000"),
-                purpose="Ремонт",
-                telegram="@ivan",
                 telegram_channel="ivan_channel",
             )
 
