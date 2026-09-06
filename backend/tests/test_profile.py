@@ -8,14 +8,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import get_current_user
-from app.core.constants import ROLE_USER
+from app.core.constants import ROLE_EMPLOYEE, ROLE_USER
 from app.db.session import get_db
 from app.main import app
 from app.models.user import User
 from app.services.auth import verify_password
 
 
-def _user():
+def _user(role=ROLE_USER):
     return User(
         id=1,
         full_name="Иван Петров",
@@ -24,7 +24,7 @@ def _user():
         password_hash="old-hash",
         phone="+79990000000",
         telegram="@ivan",
-        role=ROLE_USER,
+        role=role,
     )
 
 
@@ -94,6 +94,29 @@ class TestProfileEndpoint:
 
         assert response.status_code == 200
         assert self.user.login == "petr"
+        assert self.user.full_name == "Петр Иванов"
+        assert verify_password("NewPassword1!", self.user.password_hash)
+        assert db.committed is True
+
+    def test_employee_can_update_profile_and_password(self):
+        self.user = _user(role=ROLE_EMPLOYEE)
+        db = FakeDb()
+        self._set_dependencies(db)
+
+        response = self.client.patch(
+            "/auth/profile",
+            json={
+                "full_name": "Петр Иванов",
+                "login": "employee-petr",
+                "phone": "+79991112233",
+                "telegram": "@employee_petr",
+                "password": "NewPassword1!",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["role"] == ROLE_EMPLOYEE
+        assert self.user.login == "employee-petr"
         assert self.user.full_name == "Петр Иванов"
         assert verify_password("NewPassword1!", self.user.password_hash)
         assert db.committed is True

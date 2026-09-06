@@ -5,8 +5,10 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_employee, get_current_user
 from app.core.constants import (
+    MSG_APPLICATION_ALREADY_DECIDED,
+    MSG_APPLICATION_NOT_FOUND,
     MSG_STATEMENT_TOO_LARGE,
     MSG_STATEMENT_UNPARSABLE,
     STATEMENT_MAX_SIZE_BYTES,
@@ -14,7 +16,12 @@ from app.core.constants import (
 from app.db.session import get_db
 from app.models.application import Application, ApplicationStatus
 from app.models.user import User
-from app.schemas.application import ApplicationCreate, ApplicationResponse
+from app.schemas.application import (
+    ApplicationCreate,
+    ApplicationDecision,
+    ApplicationDecisionRequest,
+    ApplicationResponse,
+)
 from app.scoring.stmt_parser import StatementParseError, parse_statement
 
 router = APIRouter(prefix="/applications", tags=["applications"])
@@ -73,6 +80,35 @@ async def create_application(
         status=ApplicationStatus.IN_QUEUE.value,
     )
     db.add(application)
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+@router.post("/{application_id}/decision", response_model=ApplicationResponse)
+def decide_application(
+    application_id: int,
+    body: ApplicationDecisionRequest,
+    db: Session = Depends(get_db),
+    current_employee: User = Depends(get_current_employee),
+):
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if application is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=MSG_APPLICATION_NOT_FOUND,
+        )
+    if application.status != ApplicationStatus.IN_QUEUE.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=MSG_APPLICATION_ALREADY_DECIDED,
+        )
+
+    application.status = (
+        ApplicationStatus.EMPLOYEE_APPROVED.value
+        if body.decision == ApplicationDecision.APPROVE
+        else ApplicationStatus.EMPLOYEE_REJECTED.value
+    )
     db.commit()
     db.refresh(application)
     return application

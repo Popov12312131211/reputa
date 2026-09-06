@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -55,6 +56,15 @@ class ApplicationCreate(BaseModel):
                 f"Телеграм-канал не может превышать {TELEGRAM_CHANNEL_MAX_LENGTH} символов"
             )
         return v
+
+
+class ApplicationDecision(str, Enum):
+    APPROVE = "approve"
+    REJECT = "reject"
+
+
+class ApplicationDecisionRequest(BaseModel):
+    decision: ApplicationDecision
 
 
 class ApplicationResponse(BaseModel):

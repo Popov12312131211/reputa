@@ -13,15 +13,19 @@ from sqlalchemy.exc import IntegrityError
 from app.main import app
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.application import Application
 from app.models.user import User, UserRole
 from app.schemas.application import ApplicationCreate
 from app.services.auth import create_access_token
 from app.routers import applications as applications_module
 from app.core.constants import (
+    APPLICATION_STATUS_EMPLOYEE_APPROVED,
+    APPLICATION_STATUS_EMPLOYEE_REJECTED,
     APPLICATION_STATUS_IN_QUEUE,
     MSG_STATEMENT_UNPARSABLE,
     PURPOSE_MAX_LENGTH,
     TELEGRAM_CHANNEL_MAX_LENGTH,
+    ROLE_EMPLOYEE,
 )
 
 
@@ -84,6 +88,40 @@ def _current_user():
         telegram="@ivan",
         role=UserRole.USER.value,
     )
+
+
+def _application(status=APPLICATION_STATUS_IN_QUEUE):
+    return Application(
+        id=10,
+        user_id=1,
+        amount=Decimal("50000.00"),
+        purpose="Ремонт квартиры",
+        telegram="@ivan",
+        telegram_channel="@ivan_channel",
+        status=status,
+    )
+
+
+class _DecisionDb:
+    def __init__(self, application=None):
+        self.application = application
+        self.committed = False
+        self.refreshed = None
+
+    def query(self, model):
+        return self
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def first(self):
+        return self.application
+
+    def commit(self):
+        self.committed = True
+
+    def refresh(self, obj):
+        self.refreshed = obj
 
 
 class TestCreateApplicationEndpoint:
@@ -372,5 +410,72 @@ class TestApplicationCreateValidation:
                 amount=Decimal("1000"),
                 purpose="Ремонт",
                 telegram="@ivan",
+    def test_telegram_channel_without_at_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("1000"),
+                purpose="Ремонт",
+                telegram="@ivan",
                 telegram_channel="ivan_channel",
             )
+
+
+class TestApplicationDecisionEndpoint:
+    def setup_method(self):
+        self.client = TestClient(app, raise_server_exceptions=False)
+        self.employee = _current_user()
+        self.employee.role = ROLE_EMPLOYEE
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def _set_dependencies(self, db, user=None):
+        app.dependency_overrides[get_db] = lambda: db
+        app.dependency_overrides[get_current_user] = lambda: user or self.employee
+
+    def test_employee_approves_application(self):
+        application = _application()
+        db = _DecisionDb(application)
+        self._set_dependencies(db)
+        response = self.client.post("/applications/10/decision", json={"decision": "approve"})
+        assert response.status_code == 200
+        assert response.json()["status"] == APPLICATION_STATUS_EMPLOYEE_APPROVED
+        assert application.status == APPLICATION_STATUS_EMPLOYEE_APPROVED
+        assert db.committed is True
+        assert db.refreshed is application
+
+    def test_employee_rejects_application(self):
+        application = _application()
+        db = _DecisionDb(application)
+        self._set_dependencies(db)
+        response = self.client.post("/applications/10/decision", json={"decision": "reject"})
+        assert response.status_code == 200
+        assert response.json()["status"] == APPLICATION_STATUS_EMPLOYEE_REJECTED
+
+    def test_user_cannot_decide_application(self):
+        db = _DecisionDb(_application())
+        self._set_dependencies(db, _current_user())
+        response = self.client.post("/applications/10/decision", json={"decision": "approve"})
+        assert response.status_code == 403
+        assert db.committed is False
+
+    def test_decision_for_missing_application_returns_404(self):
+        db = _DecisionDb()
+        self._set_dependencies(db)
+        response = self.client.post("/applications/10/decision", json={"decision": "approve"})
+        assert response.status_code == 404
+        assert db.committed is False
+
+    def test_decision_for_already_decided_application_returns_409(self):
+        db = _DecisionDb(_application(APPLICATION_STATUS_EMPLOYEE_APPROVED))
+        self._set_dependencies(db)
+        response = self.client.post("/applications/10/decision", json={"decision": "reject"})
+        assert response.status_code == 409
+        assert db.committed is False
+
+    def test_invalid_decision_returns_422(self):
+        db = _DecisionDb(_application())
+        self._set_dependencies(db)
+        response = self.client.post("/applications/10/decision", json={"decision": "maybe"})
+        assert response.status_code == 422
+        assert db.committed is False
