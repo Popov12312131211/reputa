@@ -227,6 +227,93 @@ class TestRegistrationEndpoint:
         assert db.committed is False
 
 
+class TestEmployeeRegisterEndpoint:
+    """Регистрация сотрудника (AUTH-010): роль employee + валидация идентификатора."""
+
+    def setup_method(self):
+        self.client = TestClient(app, raise_server_exceptions=False)
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def _set_db(self, db):
+        app.dependency_overrides[get_db] = lambda: db
+
+    def _valid_payload(self, **overrides):
+        data = _valid_payload(identifier="A123room19")
+        data.pop("identifier", None)
+        data["identifier"] = "A123room19"
+        data.update(overrides)
+        return data
+
+    def test_register_employee_success(self):
+        db = _mock_db(existing_login=None)
+        self._set_db(db)
+
+        resp = self.client.post("/auth/register/employee", json=self._valid_payload())
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["login"] == "ivan"
+        assert body["role"] == UserRole.EMPLOYEE.value
+        assert body["id"] == 1
+        assert db.committed is True
+        assert len(db.added) == 1
+        assert db.added[0].role == UserRole.EMPLOYEE.value
+        assert db.added[0].password_hash != "Abcdef1!"
+
+    def test_register_employee_always_employee_even_if_users_exist(self):
+        # В отличие от обычной регистрации, bootstrap-правило не применяется:
+        # роль employee задаётся явно, даже когда в БД уже есть пользователи.
+        db = _mock_db(existing_login=None, count=1)
+        self._set_db(db)
+
+        resp = self.client.post("/auth/register/employee", json=self._valid_payload())
+        assert resp.status_code == 201
+        assert resp.json()["role"] == UserRole.EMPLOYEE.value
+
+    def test_register_employee_invalid_identifier(self):
+        db = _mock_db(existing_login=None)
+        self._set_db(db)
+
+        for bad in ("123room19", "A12room19", "A1234room19", "AA23room19", "a123ROOM19", "A123room18"):
+            resp = self.client.post("/auth/register/employee", json=self._valid_payload(identifier=bad))
+            assert resp.status_code == 422, f"identifer {bad!r} должен отклоняться"
+            assert db.committed is False
+
+    def test_register_employee_empty_identifier(self):
+        db = _mock_db(existing_login=None)
+        self._set_db(db)
+
+        resp = self.client.post("/auth/register/employee", json=self._valid_payload(identifier=""))
+        assert resp.status_code == 422
+        assert db.committed is False
+
+    def test_register_employee_valid_identifiers(self):
+        db = _mock_db(existing_login=None)
+        self._set_db(db)
+
+        for ok in ("A123room19", "z999room19", "Z000room19", "b123room19"):
+            resp = self.client.post("/auth/register/employee", json=self._valid_payload(identifier=ok))
+            assert resp.status_code == 201, f"identifer {ok!r} должен проходить"
+            assert resp.json()["role"] == UserRole.EMPLOYEE.value
+
+    def test_register_employee_duplicate_login(self):
+        db = _mock_db(existing_login="ivan")
+        self._set_db(db)
+
+        resp = self.client.post("/auth/register/employee", json=self._valid_payload())
+        assert resp.status_code == 409
+        assert db.committed is False
+
+    def test_register_employee_race_duplicate_returns_409(self):
+        db = _mock_db(existing_login=None, fail_commit=True)
+        self._set_db(db)
+
+        resp = self.client.post("/auth/register/employee", json=self._valid_payload())
+        assert resp.status_code == 409
+        assert db.rolled_back is True
+
+
 class TestPasswordValidation:
     def test_valid_password_accepted(self):
         req = RegisterRequest(
