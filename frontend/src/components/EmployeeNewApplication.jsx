@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Clock, Check, X, Search, Hash } from 'lucide-react'
 import { getJSON } from '../api'
 import { APPLICATION_STATUS, STATUS_GROUP } from '../constants/application'
+import { mockApplications, toEmployeeApplication } from '../mocks/employeeApplications'
+import ApplicationDetailModal from './ApplicationDetail'
 import './EmployeeNewApplication.css'
 
 const STATUS_ICON = {
@@ -14,16 +17,9 @@ const STATUS_ICON = {
 }
 
 // Заглушка очереди сотрудника: backend-эндпоинт списка заявок для кабинета
-// сотрудника ещё не реализован (см. EMP-004), поэтому при недоступности
-// GET /api/employee/applications таблица показывает мок, не блокируя сценарий.
-const MOCK_APPLICATIONS = [
-  { id: '3F9A2C7D1E', status: APPLICATION_STATUS.IN_QUEUE, full_name: 'Иванов Иван Иванович', amount: 250000, score: 58, created_at: '2026-09-05T10:12:00Z' },
-  { id: '8B4D0E5F2A', status: APPLICATION_STATUS.IN_QUEUE, full_name: 'Петрова Анна Сергеевна', amount: 150000, score: 41, created_at: '2026-09-05T09:40:00Z' },
-  { id: '1C6A9B3D84', status: APPLICATION_STATUS.IN_QUEUE, full_name: 'Сидоров Пётр Алексеевич', amount: 500000, score: 66, created_at: '2026-09-04T18:05:00Z' },
-  { id: 'E2F7C4A09B', status: APPLICATION_STATUS.IN_QUEUE, full_name: 'Кузнецова Мария Дмитриевна', amount: 75000, score: 47, created_at: '2026-09-04T14:27:00Z' },
-  { id: '5D8E1F6B30', status: APPLICATION_STATUS.IN_QUEUE, full_name: 'Смирнов Алексей Николаевич', amount: 1000000, score: 35, created_at: '2026-09-03T11:50:00Z' },
-  { id: '9A2C4F7E1D', status: APPLICATION_STATUS.IN_QUEUE, full_name: 'Волкова Екатерина Павловна', amount: 300000, score: null, created_at: '2026-09-03T09:15:00Z' },
-]
+// ещё не реализован (см. EMP-004), поэтому при недоступности
+// GET /api/employee/applications таблица показывает общий mock
+// (mocks/employeeApplications.js — тот же, что в /employee/application).
 
 function formatAmount(value) {
   return new Intl.NumberFormat('ru-RU').format(value)
@@ -70,10 +66,13 @@ function SortButton({ label, dir, active, ariaLabel, onSort }) {
 
 export default function EmployeeNewApplication() {
   const { t } = useTranslation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [applications, setApplications] = useState(null)
   const [query, setQuery] = useState('')
   const [idQuery, setIdQuery] = useState('')
   const [sort, setSort] = useState({ key: 'date', dir: 'asc' })
+
+  const menuId = searchParams.get('menu')
 
   useEffect(() => {
     let cancelled = false
@@ -82,7 +81,7 @@ export default function EmployeeNewApplication() {
       if (res.ok && Array.isArray(res.data)) {
         setApplications(res.data)
       } else {
-        setApplications(MOCK_APPLICATIONS)
+        setApplications(mockApplications.map(toEmployeeApplication))
       }
     })
     return () => {
@@ -96,11 +95,35 @@ export default function EmployeeNewApplication() {
     )
   }
 
-  // Поиск по ФИО + ID заявки + сортировка. Поиск работает по подстроке
-  // без учёта регистра (регистр важен: ФИО в разных источниках пишут и
-  // строчными, и заглавными).
+  // EMP-005: детальная карточка заявки открывается по ?menu={id} — общий
+  // компонент ApplicationDetailModal, тот же, что в /employee/application.
+  function openDetail(app) {
+    setSearchParams({ menu: String(app.id) })
+  }
+
+  function closeDetail() {
+    setSearchParams({})
+  }
+
+  // После решения заявки из карточки обновляем её статус в строке таблицы.
+  function updateRow(applicationId, newStatus) {
+    setApplications((prev) =>
+      prev == null
+        ? prev
+        : prev.map((app) =>
+            app.id === applicationId ? { ...app, status: newStatus } : app
+          )
+    )
+  }
+
+  // Страница показывает только заявки «на рассмотрении» (IN_QUEUE): решённые
+  // (одобренные/отклонённые) сюда не попадают ни из реального ответа, ни из
+  // мока. Дальше — поиск по ФИО + ID и сортировка (поиск по подстроке без
+  // учёта регистра).
   const visible = useMemo(() => {
-    let list = applications || []
+    let list = (applications || []).filter(
+      (app) => app.status === APPLICATION_STATUS.IN_QUEUE
+    )
     const q = query.trim().toLowerCase()
     if (q) {
       list = list.filter((app) => (app.full_name || '').toLowerCase().includes(q))
@@ -181,13 +204,13 @@ export default function EmployeeNewApplication() {
             )}
           </div>
 
-          {applications != null && applications.length === 0 ? (
-            <div className="empnewapp-empty">
-              <p className="empnewapp-empty__text">{t('employeeNewApplication.empty')}</p>
-            </div>
-          ) : applications != null && hasQuery && visible.length === 0 ? (
+          {applications != null && hasQuery && visible.length === 0 ? (
             <div className="empnewapp-empty">
               <p className="empnewapp-empty__text">{t('employeeNewApplication.emptySearch')}</p>
+            </div>
+          ) : applications != null && visible.length === 0 ? (
+            <div className="empnewapp-empty">
+              <p className="empnewapp-empty__text">{t('employeeNewApplication.empty')}</p>
             </div>
           ) : applications != null && (
             <div className="empnewapp-table" role="table" aria-label={t('employeeNewApplication.title')}>
@@ -240,7 +263,20 @@ export default function EmployeeNewApplication() {
               </div>
 
               {visible.map((app) => (
-                <div className="empnewapp-table__row" role="row" key={app.id}>
+                <div
+                  className="empnewapp-table__row"
+                  role="row"
+                  key={app.id}
+                  tabIndex={0}
+                  aria-label={String(app.id)}
+                  onClick={() => openDetail(app)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      openDetail(app)
+                    }
+                  }}
+                >
                   <div className="empnewapp-table__cell empnewapp-table__cell--id" role="cell">
                     {app.id}
                   </div>
@@ -270,6 +306,15 @@ export default function EmployeeNewApplication() {
           )}
         </div>
       </div>
+
+      {/* EMP-005: детальная карточка заявки (общий компонент) по ?menu={id}. */}
+      {menuId != null && (
+        <ApplicationDetailModal
+          menuId={menuId}
+          onClose={closeDetail}
+          onDecided={updateRow}
+        />
+      )}
     </div>
   )
 }

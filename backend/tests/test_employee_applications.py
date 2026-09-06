@@ -11,6 +11,7 @@ from app.main import app
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.application import Application
+from app.models.score_result import ScoreResult
 from app.models.user import User, UserRole
 from app.services.auth import create_access_token
 
@@ -124,4 +125,167 @@ class TestEmployeeApplicationList:
     def test_without_cookie_returns_401(self):
         self._set_db(_FakeDb([]))
         resp = self.client.get("/employee/applications")
+        assert resp.status_code == 401
+
+
+class _FakeDetailDb:
+    """Fake DB для GET /employee/applications/{id} (query -> filter -> first)."""
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    def query(self, model):
+        return self
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def first(self):
+        return self._rows[0] if self._rows else None
+
+
+class TestEmployeeApplicationDetail:
+    def setup_method(self):
+        self.client = TestClient(app, raise_server_exceptions=False)
+        app.dependency_overrides.clear()
+
+    def teardown_method(self):
+        app.dependency_overrides.clear()
+
+    def _set_db(self, db):
+        app.dependency_overrides[get_db] = lambda: db
+
+    def _set_user(self, user=None):
+        app.dependency_overrides[get_current_user] = lambda: user or _make_user()
+
+    def _make_borrower(self):
+        return User(
+            id=2,
+            full_name="Петрова Анна Сергеевна",
+            birth_date=date(1998, 3, 15),
+            login="petrova",
+            password_hash="hash",
+            phone="+79990000001",
+            telegram="@petrova",
+            role=UserRole.USER.value,
+        )
+
+    def _make_application(self, app_id, user, score=None, score_result=None):
+        app = _make_application(app_id=app_id, user=user, score=score)
+        app.score_result = score_result
+        return app
+
+    def test_returns_detail_with_score_result(self):
+        # EMP-005: карточка сотрудника включает ФИО заёмщика и полный разбор
+        # скоринга (сигналы, портрет, отчёт), которого нет у заёмщика.
+        borrower = self._make_borrower()
+        score_result = ScoreResult(
+            application_id=10,
+            positive_signals=["Регулярные поступления"],
+            risk_factors=["Нерегулярный доход"],
+            stability_score=8,
+            financial_literacy_score=7,
+            responsibility_score=9,
+            report_content="Отчёт для кредитного комитета по заявке.",
+            score=61,
+        )
+        rows = [self._make_application(app_id=10, user=borrower, score=61, score_result=score_result)]
+        self._set_db(_FakeDetailDb(rows))
+        self._set_user()
+        resp = self.client.get(
+            "/employee/applications/10",
+            cookies={"access_token": _token()},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["id"] == 10
+        assert body["full_name"] == "Петрова Анна Сергеевна"
+        assert body["score"] == 61
+        assert body["score_result"]["positive_signals"] == ["Регулярные поступления"]
+        assert body["score_result"]["risk_factors"] == ["Нерегулярный доход"]
+        assert body["score_result"]["stability_score"] == 8
+        assert body["score_result"]["financial_literacy_score"] == 7
+        assert body["score_result"]["responsibility_score"] == 9
+        assert body["score_result"]["report_content"] == "Отчёт для кредитного комитета по заявке."
+        assert body["score_result"]["score"] == 61
+
+    def test_returns_detail_without_score_result(self):
+        # Пока скоринг не рассчитан (STMT-002/TG-003), score_result приходит null.
+        borrower = self._make_borrower()
+        rows = [self._make_application(app_id=11, user=borrower, score=None)]
+        self._set_db(_FakeDetailDb(rows))
+        self._set_user()
+        resp = self.client.get(
+            "/employee/applications/11",
+            cookies={"access_token": _token()},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["id"] == 11
+        assert body["score_result"] is None
+
+    def _make_deciding_employee(self):
+        return User(
+            id=3,
+            full_name="Сидоров Пётр Иванович",
+            birth_date=date(1990, 1, 10),
+            login="sidorov",
+            password_hash="hash",
+            phone="+79990000003",
+            telegram="@sidorov",
+            role=UserRole.EMPLOYEE.value,
+        )
+
+    def test_returns_decided_by_employee(self):
+        # EMP-005: после решения заявки карточка показывает ФИО и логин
+        # сотрудника, принявшего решение.
+        app = self._make_application(app_id=12, user=self._make_borrower(), score=None)
+        app.decided_by_user = self._make_deciding_employee()
+        self._set_db(_FakeDetailDb([app]))
+        self._set_user()
+        resp = self.client.get(
+            "/employee/applications/12",
+            cookies={"access_token": _token()},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["decided_by_employee"] == {
+            "login": "sidorov",
+            "full_name": "Сидоров Пётр Иванович",
+        }
+
+    def test_decided_by_employee_is_null_before_decision(self):
+        # Пока решение не принято (статус in_queue), решивший сотрудник не задан.
+        borrower = self._make_borrower()
+        rows = [self._make_application(app_id=13, user=borrower, score=None)]
+        self._set_db(_FakeDetailDb(rows))
+        self._set_user()
+        resp = self.client.get(
+            "/employee/applications/13",
+            cookies={"access_token": _token()},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["decided_by_employee"] is None
+
+    def test_nonexistent_application_returns_404(self):
+        self._set_db(_FakeDetailDb([]))
+        self._set_user()
+        resp = self.client.get(
+            "/employee/applications/999",
+            cookies={"access_token": _token()},
+        )
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Заявка не найдена"
+
+    def test_employee_only(self):
+        # Пользовательская роль не допускается на /employee/* — 401 от middleware.
+        self._set_db(_FakeDetailDb([]))
+        resp = self.client.get(
+            "/employee/applications/10",
+            cookies={"access_token": _token(role=UserRole.USER.value)},
+        )
+        assert resp.status_code == 401
+
+    def test_without_cookie_returns_401(self):
+        self._set_db(_FakeDetailDb([]))
+        resp = self.client.get("/employee/applications/10")
         assert resp.status_code == 401

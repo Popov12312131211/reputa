@@ -148,6 +148,19 @@
 .empnewapp-table__row {
   padding: 14px 8px;
   border-bottom: 1px solid var(--border);
+  /* EMP-005: строки кликабельны — по клику открывается карточка заявки. */
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.empnewapp-table__row:hover {
+  background: var(--bg-page);
+}
+
+.empnewapp-table__row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .empnewapp-table__row:last-child {

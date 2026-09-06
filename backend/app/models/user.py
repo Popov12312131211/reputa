@@ -40,4 +40,9 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    applications: Mapped[list["Application"]] = relationship(back_populates="user")
+    applications: Mapped[list["Application"]] = relationship(
+        back_populates="user",
+        # Две FK-колонки applications ведут на users.id: user_id (автор) и
+        # decided_by (решивший сотрудник), поэтому join уточняем явно.
+        foreign_keys="Application.user_id",
+    )

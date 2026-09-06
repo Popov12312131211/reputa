@@ -435,6 +435,7 @@ class TestApplicationDecisionEndpoint:
         assert response.status_code == 200
         assert response.json()["status"] == APPLICATION_STATUS_EMPLOYEE_APPROVED
         assert application.status == APPLICATION_STATUS_EMPLOYEE_APPROVED
+        assert application.decided_by == 1
         assert db.committed is True
         assert db.refreshed is application
 
@@ -445,6 +446,7 @@ class TestApplicationDecisionEndpoint:
         response = self.client.post("/applications/10/decision", json={"decision": "reject"})
         assert response.status_code == 200
         assert response.json()["status"] == APPLICATION_STATUS_EMPLOYEE_REJECTED
+        assert application.decided_by == 1
 
     def test_user_cannot_decide_application(self):
         db = _DecisionDb(_application())
