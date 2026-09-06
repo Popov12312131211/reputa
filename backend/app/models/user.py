@@ -40,4 +40,11 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    applications: Mapped[list["Application"]] = relationship(back_populates="user")
+    applications: Mapped[list["Application"]] = relationship(
+        back_populates="user",
+        # Каскад удаления заявок выполняет сама БД (users.id -> applications.user_id
+        # объявлен с ON DELETE CASCADE). Без passive_deletes SQLAlchemy пытался бы
+        # обнулить user_id у заявок перед удалением пользователя — а колонка NOT NULL,
+        # что падало бы с IntegrityError при удалении аккаунта.
+        passive_deletes=True,
+    )

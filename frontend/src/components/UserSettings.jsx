@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useBlocker } from 'react-router-dom'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import { Pencil, Eye, EyeOff } from 'lucide-react'
+import { getJSON, postJSON, patchJSON, deleteJSON } from '../api'
+import { useAuth } from '../contexts/AuthContext'
 import { PHONE, PHONE_MASK, PASSWORD_RULES, TELEGRAM } from '../constants/auth'
 import { formatPhone, phoneIsValid, requiredIsValid } from '../utils/validators'
 import './UserSettings.css'
@@ -9,29 +11,62 @@ import './UserSettings.css'
 // Маска для read-only отображения полей пароля.
 const MASK_PASSWORD = '••••••••'
 
-// Мок текущих значений профиля: реального сохранения на бэкенд пока нет
-// (APP-006 — только frontend), поэтому поля инициализированы заглушкой.
-const MOCK_PROFILE = {
-  fullName: 'Иванов Иван Иванович',
-  login: 'IvanIvanov2000',
-  telegram: '@ivan_ivanov',
-  phone: '+7(999)123-45-67',
+// Пустой профиль — стартовое значение до загрузки с бэкенда GET /auth/profile.
+const EMPTY_PROFILE = {
+  fullName: '',
+  login: '',
+  telegram: '',
+  phone: '',
 }
 
 const ICON_SIZE = 18
 
 export default function UserSettings() {
   const { t } = useTranslation()
+  const { clearSession } = useAuth()
+  const navigate = useNavigate()
+
+  const [loadError, setLoadError] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   // savedValues — «сохранённый» снимок: по нему считаются несохранённые
   // изменения (dirty) и происходит отмена правок при выходе из режима
   // редактирования карандашом.
   const [savedValues, setSavedValues] = useState({
-    ...MOCK_PROFILE,
+    ...EMPTY_PROFILE,
     password: '',
     passwordConfirm: '',
   })
   const [values, setValues] = useState(savedValues)
+
+  // Загрузка текущего профиля с бэкенда при монтировании.
+  useEffect(() => {
+    let cancelled = false
+    getJSON('/api/auth/profile').then((res) => {
+      if (cancelled) return
+      if (!res.ok || !res.data) {
+        setLoadError(true)
+        return
+      }
+      // Телефон хранится на бэкенде в виде +79991234567; для поля настроек
+      // приводим к той же маске, что использует страница регистрации.
+      const phone = formatPhone(res.data.phone.replace(/\D/g, ''))
+      const loaded = {
+        fullName: res.data.full_name,
+        login: res.data.login,
+        telegram: res.data.telegram,
+        phone,
+        password: '',
+        passwordConfirm: '',
+      }
+      setValues(loaded)
+      setSavedValues(loaded)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Какое поле (или пара полей пароля — общий ключ password) сейчас
   // в режиме редактирования. По умолчанию всё read-only.
@@ -138,21 +173,52 @@ export default function UserSettings() {
     setVisible((prev) => ({ ...prev, [field]: !prev[field] }))
   }
 
-  // Сохранение — заглушка (backend APP-006 не подключён): фиксируем снимок,
-  // dirty обнуляется, кнопка «Сохранить» исчезает.
-  function handleSave() {
-    if (!formValid) return
-    console.log('save profile (заглушка)')
+  // Сохранение профиля: PATCH /api/auth/profile (APP-006B — реальный бэкенд).
+  // Пароль отправляется только если пользователь его менял; остальные поля —
+  // всегда. Телефон приводится к формату бэкенда +79991234567 (как в регистрации).
+  async function handleSave() {
+    if (!formValid || saving) return
+    setSaving(true)
+    setSaveError('')
+
+    const passwordDirty =
+      values.password !== savedValues.password ||
+      values.passwordConfirm !== savedValues.passwordConfirm
+    const body = {
+      full_name: values.fullName.trim(),
+      login: values.login.trim(),
+      phone: `+${values.phone.replace(/\D/g, '')}`,
+      telegram: values.telegram.trim(),
+      password: passwordDirty ? values.password : null,
+    }
+
+    const res = await patchJSON('/api/auth/profile', body)
+    setSaving(false)
+
+    if (!res.ok) {
+      setSaveError(res.error || t('userSettings.saveError'))
+      return
+    }
+
     setSavedValues({ ...values })
     setTouched({})
+    setSaveError('')
   }
 
-  function handleDeleteAccount() {
-    console.log('delete account (заглушка)')
+  async function handleLogout() {
+    // Сбрасываем dirty заранее, чтобы on-beforeunload/useBlocker не перехватили
+    // переход на /login после успешного выхода.
+    setSavedValues({ ...values })
+    const res = await postJSON('/api/auth/logout', {})
+    clearSession()
+    navigate('/login', { replace: true })
   }
 
-  function handleLogout() {
-    console.log('logout (заглушка)')
+  async function handleDeleteAccount() {
+    setSavedValues({ ...values })
+    const res = await deleteJSON('/api/auth/delete')
+    clearSession()
+    navigate('/login', { replace: true })
   }
 
   const inputClass = (key) =>
@@ -165,6 +231,8 @@ export default function UserSettings() {
     <div className="usersettings-page">
       <div className="usersettings-page__inner">
         <h1 className="usersettings-page__title">{t('userSettings.title')}</h1>
+
+        {loadError && <p className="usersettings-field__error">{t('userSettings.loadError')}</p>}
 
         <section className="usersettings-card">
           <h2 className="usersettings-card__subtitle">{t('userSettings.basicTitle')}</h2>
@@ -424,12 +492,13 @@ export default function UserSettings() {
         <button
           className="usersettings-save"
           type="button"
-          disabled={!formValid}
+          disabled={!formValid || saving}
           onClick={handleSave}
         >
-          {t('userSettings.save')}
+          {saving ? t('userSettings.saving') : t('userSettings.save')}
         </button>
       )}
+      {saveError && !dirty && <p className="usersettings-field__error">{saveError}</p>}
 
       {blocker.state === 'blocked' && (
         <div className="usersettings-confirm">
