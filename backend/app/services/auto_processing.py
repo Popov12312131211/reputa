@@ -16,11 +16,14 @@ from app.models.employee_thresholds import EmployeeThresholds
 from app.models.user import User
 
 
-def get_employee_thresholds(db: Session, employee: User) -> EmployeeThresholds:
+def get_employee_thresholds(
+    db: Session, employee: User, *, commit: bool = True
+) -> EmployeeThresholds:
     """Возвращает персональные пороги сотрудника (APP-008).
 
     Если записи нет — создаёт с дефолтами (страховка для пустой БД; в норме
-    записи сотрудников сидирует миграция 0006).
+    записи сотрудников сидирует миграция 0006). `commit=False` используется
+    вызывающим транзакционным пайплайном.
     """
     settings = (
         db.query(EmployeeThresholds)
@@ -34,8 +37,10 @@ def get_employee_thresholds(db: Session, employee: User) -> EmployeeThresholds:
             auto_approve_threshold=AUTO_APPROVE_THRESHOLD_DEFAULT,
         )
         db.add(settings)
-        db.commit()
-        db.refresh(settings)
+        db.flush()
+        if commit:
+            db.commit()
+            db.refresh(settings)
     return settings
 
 
@@ -66,7 +71,9 @@ def _random_employees(db: Session, rng=random) -> Sequence[User]:
     return employees
 
 
-def apply_auto_decision(db: Session, application: Application, rng=random) -> str | None:
+def apply_auto_decision(
+    db: Session, application: Application, rng=random, *, commit: bool = True
+) -> str | None:
     """Применяет автообработку к заявке после расчёта итоговой оценки (APP-008).
 
     Перебирает сотрудников в случайном порядке и проверяет, подпадает ли
@@ -79,7 +86,8 @@ def apply_auto_decision(db: Session, application: Application, rng=random) -> st
 
     Уже решённые заявки (статус не in_queue) не трогаются — возвращается
     текущий статус. Без оценки (score is None) статус не меняется
-    и возвращается None.
+    и возвращается None. При `commit=False` изменения остаются в транзакции
+    вызывающего кода.
     """
     if application.score is None:
         return None
@@ -87,14 +95,16 @@ def apply_auto_decision(db: Session, application: Application, rng=random) -> st
         return application.status
     for employee in _random_employees(db, rng=rng):
         status = decide_auto_status(
-            application.score, get_employee_thresholds(db, employee)
+            application.score, get_employee_thresholds(db, employee, commit=commit)
         )
         if status != APPLICATION_STATUS_IN_QUEUE:
             application.status = status
             application.decided_by = employee.id
-            db.commit()
+            if commit:
+                db.commit()
             return status
     application.status = APPLICATION_STATUS_IN_QUEUE
     application.decided_by = None
-    db.commit()
+    if commit:
+        db.commit()
     return APPLICATION_STATUS_IN_QUEUE

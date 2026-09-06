@@ -52,8 +52,14 @@ def _mock_db(fail_commit=False):
         def filter(self, *args, **kwargs):
             return self
 
+        def order_by(self, *args, **kwargs):
+            return self
+
         def first(self):
             return None
+
+        def all(self):
+            return []
 
         def add(self, obj):
             self.added.append(obj)
@@ -67,6 +73,11 @@ def _mock_db(fail_commit=False):
             for obj in self.added:
                 if getattr(obj, "id", None) is None:
                     obj.id = generate_application_id()
+
+        def flush(self):
+            for obj in self.added:
+                if getattr(obj, "id", None) is None:
+                    obj.id = 1
 
         def rollback(self):
             self.rolled_back = True
@@ -171,14 +182,17 @@ class TestCreateApplicationEndpoint:
         assert body["telegram"] == "@ivan"
         assert body["telegram_channel"] == "@ivan_channel"
         assert body["status"] == APPLICATION_STATUS_IN_QUEUE
-        assert body["score"] is None
+        assert body["score"] == 87
 
         assert db.committed is True
-        assert len(db.added) == 1
+        assert len(db.added) == 2
         created = db.added[0]
         assert created.user_id == 1
         assert created.amount == Decimal("50000.00")
         assert created.status == APPLICATION_STATUS_IN_QUEUE
+        score_result = db.added[1]
+        assert score_result.application_id == created.id
+        assert score_result.score == created.score
 
     def test_create_application_strips_fields(self):
         db = _mock_db()
@@ -199,6 +213,23 @@ class TestCreateApplicationEndpoint:
         assert created.purpose == "Ремонт квартиры"
         assert created.telegram == "@ivan"
         assert created.telegram_channel == "@ivan_channel"
+        assert created.score == 87
+
+    def test_create_application_rolls_back_when_scoring_fails(self, monkeypatch):
+        def fail_scoring(parsed_statement):
+            raise RuntimeError("scoring failed")
+
+        monkeypatch.setattr(applications_module, "score_statement", fail_scoring)
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db)
+
+        assert resp.status_code == 500
+        assert resp.json()["detail"] == "Не удалось рассчитать скоринг заявки"
+        assert db.committed is False
+        assert db.rolled_back is True
 
     def test_create_application_missing_statement_returns_422(self):
         db = _mock_db()

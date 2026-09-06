@@ -9,12 +9,14 @@ from app.api.deps import get_current_employee, get_current_user
 from app.core.constants import (
     MSG_APPLICATION_ALREADY_DECIDED,
     MSG_APPLICATION_NOT_FOUND,
+    MSG_SCORING_FAILED,
     MSG_STATEMENT_TOO_LARGE,
     MSG_STATEMENT_UNPARSABLE,
     STATEMENT_MAX_SIZE_BYTES,
 )
 from app.db.session import get_db
 from app.models.application import Application, ApplicationStatus
+from app.models.score_result import ScoreResult
 from app.models.user import User
 from app.schemas.application import (
     ApplicationCreate,
@@ -23,6 +25,8 @@ from app.schemas.application import (
     ApplicationResponse,
 )
 from app.scoring.stmt_parser import StatementParseError, parse_statement
+from app.scoring.stmt_scoring import score_statement
+from app.services.auto_processing import apply_auto_decision
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -64,7 +68,7 @@ async def create_application(
     # Файл нигде не сохраняется (см. PLAN.md), распознавание служит валидацией
     # того, что загружен именно файл-выписка поддерживаемого банка.
     try:
-        parse_statement(statement_content, filename=statement.filename)
+        parsed_statement = parse_statement(statement_content, filename=statement.filename)
     except StatementParseError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -80,7 +84,24 @@ async def create_application(
         status=ApplicationStatus.IN_QUEUE.value,
     )
     db.add(application)
-    db.commit()
+    db.flush()
+    try:
+        score_result = score_statement(parsed_statement)
+        application.score = score_result["score"]
+        db.add(
+            ScoreResult(
+                application_id=application.id,
+                **score_result,
+            )
+        )
+        apply_auto_decision(db, application, commit=False)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=MSG_SCORING_FAILED,
+        ) from exc
     db.refresh(application)
     return application
 
