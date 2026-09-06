@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth, ROLE_HOME } from '../contexts/AuthContext'
+import { postJSON } from '../api'
 import { SHOW_AUTH_ILLUSTRATION } from '../constants/auth'
 import './Login.css'
 
 export default function Login() {
   const { t } = useTranslation()
+  const { setUser } = useAuth()
+  const navigate = useNavigate()
 
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
@@ -17,15 +21,22 @@ export default function Login() {
   const passwordValid = password.length > 0
   const formValid = loginValid && passwordValid
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setTouched({ login: true, password: true })
 
     if (!formValid) return
 
     setServerError('')
-    // TODO: отправка на AUTH-002 (backend ещё не реализован)
-    setServerError(t('login.serverNotReady'))
+    const result = await postJSON('/api/auth/login', { login: login.trim(), password })
+
+    if (!result.ok) {
+      setServerError(result.error || t('login.error'))
+      return
+    }
+
+    setUser(result.data)
+    navigate(ROLE_HOME[result.data.role] || '/login')
   }
 
   return (

@@ -1,138 +1,401 @@
-.user-settings {
-  --settings-bg: #F8F7F2;
-  --settings-card: #FFFFFF;
-  --settings-text: #191919;
-  --settings-muted: #6E7168;
-  --settings-border: #E6E3D9;
-  --settings-accent: #51B38A;
-  --settings-accent-hover: #3E8F6D;
-  --settings-error: #C1584A;
+.usersettings-page {
+  --bg-page: #F8F7F2;
+  --card: #FFFFFF;
+  --text: #191919;
+  --text-muted: #6E7168;
+  --border: #E6E3D9;
+  --accent: #51B38A;
+  --accent-hover: #3E8F6D;
+  --error: #C1584A;
+  --card-radius: 24px;
 
   min-height: 100vh;
-  padding: clamp(32px, 7vw, 88px) clamp(24px, 8vw, 120px);
-  color: var(--settings-text);
-  background: var(--settings-bg);
+  padding: 40px 48px 88px;
+  background: var(--bg-page);
 }
 
-.user-settings__heading {
+.usersettings-page__inner {
   max-width: 680px;
-  margin-bottom: 36px;
+  width: 100%;
+  margin: 0 auto;
 }
 
-.user-settings__eyebrow {
-  margin: 0 0 12px;
-  color: var(--settings-accent-hover);
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.user-settings h1 {
-  margin: 0;
+.usersettings-page__title {
   font-family: "RockStar", "Inter", Arial, sans-serif;
-  font-size: clamp(32px, 4vw, 56px);
+  font-size: 32px;
   font-weight: 400;
-  line-height: 1;
+  color: var(--text);
+  margin-bottom: 24px;
 }
 
-.user-settings__description {
-  max-width: 500px;
-  margin: 18px 0 0;
-  color: var(--settings-muted);
-  font-size: 16px;
-  line-height: 1.5;
+.usersettings-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  padding: 40px;
+  margin-bottom: 24px;
 }
 
-.user-settings__form {
-  max-width: 760px;
-  padding: clamp(24px, 4vw, 48px);
-  background: var(--settings-card);
-  border: 1px solid var(--settings-border);
-  border-radius: 8px;
+.usersettings-card__subtitle {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text);
+  margin: 0 0 16px;
 }
 
-.user-settings__fields {
+.usersettings-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-.user-settings label {
+.usersettings-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.usersettings-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  color: var(--settings-muted);
+  gap: 6px;
+}
+
+.usersettings-field__label {
   font-size: 14px;
+  line-height: 18px;
+  color: var(--text-muted);
 }
 
-.user-settings__password {
-  grid-column: 1 / -1;
+/* Все инпуты одной высоты и с одинаковыми внутренними отступами, чтобы сетка
+   2×2 и пара пароля были выровнены идеально; отступ справа оставляет место
+   под иконку редактирования. */
+.usersettings-field__wrap {
+  position: relative;
 }
 
-.user-settings input {
-  box-sizing: border-box;
+.usersettings-field__input {
   width: 100%;
   height: 48px;
-  padding: 0 14px;
-  color: var(--settings-text);
+  padding: 0 16px;
+  padding-right: 44px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 200;
   background: #FFFFFF;
   border: 1px solid #1C201D;
-  border-radius: 8px;
-  font: inherit;
-  font-size: 16px;
+  border-radius: 12px;
   outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
 }
 
-.user-settings input:focus {
-  border-color: var(--settings-accent-hover);
+.usersettings-field__input--readonly {
+  color: var(--text-muted);
 }
 
-.user-settings__submit {
-  min-width: 180px;
-  height: 48px;
-  margin-top: 28px;
-  padding: 0 24px;
-  color: #FFFFFF;
-  background: var(--settings-accent);
-  border: 0;
-  border-radius: 8px;
+.usersettings-field__input--editable {
+  color: var(--text);
+}
+
+.usersettings-field__input:focus {
+  border-color: var(--accent-hover);
+}
+
+/* Поля пароля: отступ под иконку глаза вместо иконки редактирования. */
+.usersettings-field__wrap .usersettings-field__input--password {
+  padding-right: 56px;
+}
+
+.usersettings-field__error {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--error);
+  margin: 0;
+}
+
+.usersettings-field__pencil {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
   cursor: pointer;
-  font: inherit;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.usersettings-field__pencil:hover {
+  color: var(--accent);
+}
+
+.usersettings-field__pencil--active {
+  color: var(--accent);
+}
+
+/* Глаз показать/скрыть пароль — как на странице регистрации. */
+.usersettings-field__toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.usersettings-field__toggle:hover {
+  color: var(--text);
+}
+
+.usersettings-field__eye--closed {
+  display: none;
+}
+
+.usersettings-field__toggle--visible .usersettings-field__eye--open {
+  display: none;
+}
+
+.usersettings-field__toggle--visible .usersettings-field__eye--closed {
+  display: block;
+}
+
+/* Подсказка требований к паролю — как на странице регистрации. */
+.usersettings-field__hint {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.usersettings-field__hint li {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.usersettings-field__hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.usersettings-field__hint--ok .usersettings-field__hint-icon {
+  color: var(--accent);
+}
+
+.usersettings-field__hint--ok {
+  color: var(--accent);
+}
+
+/* Пара паролей + общая кнопка редактирования в одном ряду с полями. */
+.usersettings-password {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.usersettings-password__edit {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-top: 26px;
+}
+
+.usersettings-password__pencil {
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF;
+  border: 1px solid #1C201D;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.usersettings-password__pencil:hover {
+  color: var(--accent);
+}
+
+.usersettings-password__pencil--active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.usersettings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.usersettings-actions__btn {
+  width: 100%;
+  height: 52px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 200;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
   transition: background 0.2s ease;
 }
 
-.user-settings__submit:hover:not(:disabled) {
-  background: var(--settings-accent-hover);
+.usersettings-actions__btn--danger {
+  background: #F4E2DF;
+  color: #A9443B;
 }
 
-.user-settings__submit:disabled {
-  cursor: wait;
-  opacity: 0.6;
+.usersettings-actions__btn--danger:hover {
+  background: #EBCBC5;
 }
 
-.user-settings__message {
-  margin: 24px 0 0;
+/* Фиксированная кнопка «Сохранить» — правый нижний угол, поверх контента. */
+.usersettings-save {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  height: 48px;
+  padding: 0 28px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 200;
+  color: #FFFFFF;
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(25, 25, 25, 0.15);
+  transition: background 0.2s ease;
+  z-index: 10;
+}
+
+.usersettings-save:hover {
+  background: var(--accent-hover);
+}
+
+.usersettings-save:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Подтверждение ухода со страницы при несохранённых изменениях. */
+.usersettings-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(25, 25, 25, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.usersettings-confirm__box {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.usersettings-confirm__title {
+  font-family: "RockStar", "Inter", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--text);
+  margin: 0;
+}
+
+.usersettings-confirm__message {
   font-size: 14px;
+  line-height: 20px;
+  color: var(--text-muted);
+  margin: 0;
 }
 
-.user-settings__message--success {
-  color: var(--settings-accent-hover);
+.usersettings-confirm__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
 }
 
-.user-settings__message--error {
-  color: var(--settings-error);
+.usersettings-confirm__btn {
+  flex: 1;
+  height: 44px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 200;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
-.user-settings__status {
-  color: var(--settings-muted);
+.usersettings-confirm__btn--stay {
+  color: #FFFFFF;
+  background: var(--accent);
+}
+
+.usersettings-confirm__btn--stay:hover {
+  background: var(--accent-hover);
+}
+
+.usersettings-confirm__btn--leave {
+  background: #F4E2DF;
+  color: #A9443B;
+}
+
+.usersettings-confirm__btn--leave:hover {
+  background: #EBCBC5;
 }
 
 @media (max-width: 640px) {
-  .user-settings__fields {
-    grid-template-columns: 1fr;
+  .usersettings-page {
+    padding: 24px 16px 88px;
   }
 
-  .user-settings__password {
-    grid-column: auto;
+  .usersettings-card {
+    padding: 24px 16px;
+  }
+
+  .usersettings-grid,
+  .usersettings-row,
+  .usersettings-actions {
+    grid-template-columns: 1fr;
   }
 }

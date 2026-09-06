@@ -18,7 +18,7 @@ class ApplicationCreate(BaseModel):
     amount: Decimal
     purpose: str
     telegram: str
-    telegram_channel: str
+    telegram_channel: str = ""
 
     @field_validator("amount")
     @classmethod
@@ -48,8 +48,8 @@ class ApplicationCreate(BaseModel):
     @field_validator("telegram_channel")
     @classmethod
     def validate_telegram_channel(cls, v: str) -> str:
-        v = _strip_required(v, "Телеграм-канал не может быть пустым")
-        if not v.startswith(TELEGRAM_PREFIX):
+        v = (v or "").strip()
+        if v and not v.startswith(TELEGRAM_PREFIX):
             raise ValueError("Телеграм-канал должен начинаться с @")
         if len(v) > TELEGRAM_CHANNEL_MAX_LENGTH:
             raise ValueError(
@@ -79,3 +79,16 @@ class ApplicationResponse(BaseModel):
     status: str
     score: int | None = None
     created_at: datetime | None = None
+
+
+class ApplicationDetailResponse(ApplicationResponse):
+    """Детальная карточка заявки (APP-005). Добавляет ФИО заёмщика для шапки."""
+
+    full_name: str
+
+
+class ApplicationListItemResponse(ApplicationResponse):
+    """Строка списка всех заявок для сотрудника (EMP-004). Добавляет ФИО
+    заёмщика из связанной таблицы users для таблицы /employee/application."""
+
+    full_name: str

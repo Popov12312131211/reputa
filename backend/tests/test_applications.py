@@ -16,16 +16,25 @@ from app.db.session import get_db
 from app.models.application import Application
 from app.models.user import User, UserRole
 from app.schemas.application import ApplicationCreate
-from app.services.security import create_access_token
+from app.services.auth import create_access_token
 from app.routers import applications as applications_module
 from app.core.constants import (
     APPLICATION_STATUS_EMPLOYEE_APPROVED,
     APPLICATION_STATUS_EMPLOYEE_REJECTED,
     APPLICATION_STATUS_IN_QUEUE,
+    MSG_STATEMENT_UNPARSABLE,
     PURPOSE_MAX_LENGTH,
     TELEGRAM_CHANNEL_MAX_LENGTH,
     ROLE_EMPLOYEE,
 )
+
+
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+
+
+def _sber_fixture() -> bytes:
+    with open(os.path.join(FIXTURES_DIR, "sber.pdf"), "rb") as fh:
+        return fh.read()
 
 
 def _mock_db(fail_commit=False):
@@ -142,7 +151,7 @@ class TestCreateApplicationEndpoint:
         if data:
             payload.update(data)
         if files is None:
-            files = {"statement": ("stmt.pdf", b"%PDF-1.4 fake", "application/pdf")}
+            files = {"statement": ("sber.pdf", _sber_fixture(), "application/pdf")}
         return self.client.post("/applications", data=payload, files=files)
 
     def test_create_application_success(self):
@@ -243,14 +252,23 @@ class TestCreateApplicationEndpoint:
         assert resp.status_code == 422
         assert db.committed is False
 
-    def test_create_application_channel_blank_returns_422(self):
+    def test_create_application_channel_blank_accepted(self):
         db = _mock_db()
         self._set_db(db)
         self._set_user()
 
         resp = self._post(db, data={"telegram_channel": ""})
-        assert resp.status_code == 422
-        assert db.committed is False
+        assert resp.status_code == 201
+        assert db.added[0].telegram_channel == ""
+
+    def test_create_application_channel_omitted_accepted(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(db, data={"telegram_channel": None})
+        assert resp.status_code == 201
+        assert db.added[0].telegram_channel == ""
 
     def test_create_application_channel_too_long_returns_422(self):
         db = _mock_db()
@@ -274,6 +292,20 @@ class TestCreateApplicationEndpoint:
         assert resp.status_code == 413
         assert db.committed is False
 
+    def test_create_application_unparseable_statement_returns_422(self):
+        db = _mock_db()
+        self._set_db(db)
+        self._set_user()
+
+        resp = self._post(
+            db,
+            files={"statement": ("garbage.pdf", b"not a pdf at all", "application/pdf")},
+        )
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == MSG_STATEMENT_UNPARSABLE
+        assert db.committed is False
+        assert db.added == []
+
     def test_create_application_unauthenticated_returns_401(self):
         db = _mock_db()
         self._set_db(db)
@@ -295,7 +327,19 @@ class TestCreateApplicationEndpoint:
     def test_create_application_unknown_user_returns_401(self):
         db = _mock_db()
         self._set_db(db)
-        self.client.cookies.set("access_token", create_access_token(999))
+        # Токен выпускается для пользователя, которого нет в БД (и которого
+        # не вернёт fake-БД) — реальная зависимость get_current_user даёт 401.
+        ghost = User(
+            id=999,
+            full_name="Призрак",
+            birth_date=date(1995, 5, 20),
+            login="ghost",
+            password_hash="hash",
+            phone="+79990000000",
+            telegram="@ghost",
+            role=UserRole.USER.value,
+        )
+        self.client.cookies.set("access_token", create_access_token(ghost))
 
         resp = self._post(db)
         assert resp.status_code == 401
@@ -351,13 +395,28 @@ class TestApplicationCreateValidation:
                 telegram_channel="@ivan_channel",
             )
 
-    def test_telegram_channel_blank_rejected(self):
+    def test_telegram_channel_blank_accepted(self):
+        req = ApplicationCreate(
+            amount=Decimal("1000"),
+            purpose="Ремонт",
+            telegram="@ivan",
+            telegram_channel="",
+        )
+        assert req.telegram_channel == ""
+
+    def test_telegram_channel_without_at_rejected(self):
         with pytest.raises(ValidationError):
             ApplicationCreate(
                 amount=Decimal("1000"),
                 purpose="Ремонт",
                 telegram="@ivan",
-                telegram_channel="",
+    def test_telegram_channel_without_at_rejected(self):
+        with pytest.raises(ValidationError):
+            ApplicationCreate(
+                amount=Decimal("1000"),
+                purpose="Ремонт",
+                telegram="@ivan",
+                telegram_channel="ivan_channel",
             )
 
 
@@ -378,9 +437,7 @@ class TestApplicationDecisionEndpoint:
         application = _application()
         db = _DecisionDb(application)
         self._set_dependencies(db)
-
         response = self.client.post("/applications/10/decision", json={"decision": "approve"})
-
         assert response.status_code == 200
         assert response.json()["status"] == APPLICATION_STATUS_EMPLOYEE_APPROVED
         assert application.status == APPLICATION_STATUS_EMPLOYEE_APPROVED
@@ -391,44 +448,34 @@ class TestApplicationDecisionEndpoint:
         application = _application()
         db = _DecisionDb(application)
         self._set_dependencies(db)
-
         response = self.client.post("/applications/10/decision", json={"decision": "reject"})
-
         assert response.status_code == 200
         assert response.json()["status"] == APPLICATION_STATUS_EMPLOYEE_REJECTED
 
     def test_user_cannot_decide_application(self):
         db = _DecisionDb(_application())
         self._set_dependencies(db, _current_user())
-
         response = self.client.post("/applications/10/decision", json={"decision": "approve"})
-
         assert response.status_code == 403
         assert db.committed is False
 
     def test_decision_for_missing_application_returns_404(self):
         db = _DecisionDb()
         self._set_dependencies(db)
-
         response = self.client.post("/applications/10/decision", json={"decision": "approve"})
-
         assert response.status_code == 404
         assert db.committed is False
 
     def test_decision_for_already_decided_application_returns_409(self):
         db = _DecisionDb(_application(APPLICATION_STATUS_EMPLOYEE_APPROVED))
         self._set_dependencies(db)
-
         response = self.client.post("/applications/10/decision", json={"decision": "reject"})
-
         assert response.status_code == 409
         assert db.committed is False
 
     def test_invalid_decision_returns_422(self):
         db = _DecisionDb(_application())
         self._set_dependencies(db)
-
         response = self.client.post("/applications/10/decision", json={"decision": "maybe"})
-
         assert response.status_code == 422
         assert db.committed is False
