@@ -109,6 +109,7 @@ def decide_application(
         if body.decision == ApplicationDecision.APPROVE
         else ApplicationStatus.EMPLOYEE_REJECTED.value
     )
+    application.decided_by = current_employee.id
     db.commit()
     db.refresh(application)
     return application

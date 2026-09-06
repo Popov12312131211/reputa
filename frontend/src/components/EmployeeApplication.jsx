@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Clock, Check, X, Search, Filter, Hash } from 'lucide-react'
 import { getJSON } from '../api'
 import { APPLICATION_STATUS, STATUS_GROUP } from '../constants/application'
+import { mockApplications, toEmployeeApplication } from '../mocks/employeeApplications'
+import ApplicationDetailModal from './ApplicationDetail'
 import './EmployeeApplication.css'
 
 const STATUS_ICON = {
@@ -24,15 +27,6 @@ const REJECTED_STATUSES = new Set([
   APPLICATION_STATUS.AUTO_REJECTED,
   APPLICATION_STATUS.EMPLOYEE_REJECTED,
 ])
-
-const MOCK_APPLICATIONS = [
-  { id: '3F9A2C7D1E', status: APPLICATION_STATUS.AUTO_APPROVED, full_name: 'Иванов Иван Иванович', amount: 250000, score: 84, created_at: '2026-09-05T10:12:00Z' },
-  { id: '8B4D0E5F2A', status: APPLICATION_STATUS.IN_QUEUE, full_name: 'Петрова Анна Сергеевна', amount: 150000, score: 41, created_at: '2026-09-05T09:40:00Z' },
-  { id: '1C6A9B3D84', status: APPLICATION_STATUS.AUTO_REJECTED, full_name: 'Сидоров Пётр Алексеевич', amount: 500000, score: 24, created_at: '2026-09-04T18:05:00Z' },
-  { id: 'E2F7C4A09B', status: APPLICATION_STATUS.EMPLOYEE_APPROVED, full_name: 'Кузнецова Мария Дмитриевна', amount: 75000, score: 77, created_at: '2026-09-04T14:27:00Z' },
-  { id: '5D8E1F6B30', status: APPLICATION_STATUS.EMPLOYEE_REJECTED, full_name: 'Смирнов Алексей Николаевич', amount: 1000000, score: 12, created_at: '2026-09-03T11:50:00Z' },
-  { id: '9A2C4F7E1D', status: APPLICATION_STATUS.IN_QUEUE, full_name: 'Волкова Екатерина Павловна', amount: 300000, score: null, created_at: '2026-09-03T09:15:00Z' },
-]
 
 function formatAmount(value) {
   return new Intl.NumberFormat('ru-RU').format(value)
@@ -78,12 +72,15 @@ function SortButton({ label, dir, active, ariaLabel, onSort }) {
 
 export default function EmployeeApplication() {
   const { t } = useTranslation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [applications, setApplications] = useState(null)
   const [query, setQuery] = useState('')
   const [idQuery, setIdQuery] = useState('')
   const [filter, setFilter] = useState('all')
   const [filterOpen, setFilterOpen] = useState(false)
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' })
+
+  const menuId = searchParams.get('menu')
 
   useEffect(() => {
     let cancelled = false
@@ -92,7 +89,7 @@ export default function EmployeeApplication() {
       if (res.ok && Array.isArray(res.data)) {
         setApplications(res.data)
       } else {
-        setApplications(MOCK_APPLICATIONS)
+        setApplications(mockApplications.map(toEmployeeApplication))
       }
     })
     return () => {
@@ -100,9 +97,29 @@ export default function EmployeeApplication() {
     }
   }, [])
 
+  function openDetail(app) {
+    setSearchParams({ menu: String(app.id) })
+  }
+
+  function closeDetail() {
+    setSearchParams({})
+  }
+
   function handleSort(key) {
     setSort((prev) =>
       prev.key === key ? { key, dir: prev.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: 'asc' }
+    )
+  }
+
+  // EMP-005: после решения заявки из карточки обновляем её статус в списке,
+  // чтобы таблица не показывала устаревшее состояние.
+  function updateRow(applicationId, newStatus) {
+    setApplications((prev) =>
+      prev == null
+        ? prev
+        : prev.map((app) =>
+            app.id === applicationId ? { ...app, status: newStatus } : app
+          )
     )
   }
 
@@ -283,7 +300,20 @@ export default function EmployeeApplication() {
                   </div>
 
                   {visible.map((app) => (
-                    <div className="empapp-table__row" role="row" key={app.id}>
+                    <div
+                      className="empapp-table__row"
+                      role="row"
+                      key={app.id}
+                      tabIndex={0}
+                      aria-label={String(app.id)}
+                      onClick={() => openDetail(app)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          openDetail(app)
+                        }
+                      }}
+                    >
                       <div className="empapp-table__cell empapp-table__cell--id" role="cell">
                         {app.id}
                       </div>
@@ -315,6 +345,16 @@ export default function EmployeeApplication() {
           )}
         </div>
       </div>
+
+      {/* EMP-005: детальная карточка заявки сотрудника — общий компонент
+          (тот же, что в /employee/newApplication), открывается по ?menu={id}. */}
+      {menuId != null && (
+        <ApplicationDetailModal
+          menuId={menuId}
+          onClose={closeDetail}
+          onDecided={updateRow}
+        />
+      )}
     </div>
   )
 }

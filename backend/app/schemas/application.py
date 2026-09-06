@@ -92,3 +92,38 @@ class ApplicationListItemResponse(ApplicationResponse):
     заёмщика из связанной таблицы users для таблицы /employee/application."""
 
     full_name: str
+
+
+class ScoreResultResponse(BaseModel):
+    """Результат скоринга заявки (EMP-005): позитивные сигналы, факторы риска,
+    психологический портрет (три метрики 0–10) и отчёт для кредитного комитета.
+    Может отсутствовать у заявки, пока пайплайн STMT-002/TG-003 не заполнил результат."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    positive_signals: list[str]
+    risk_factors: list[str]
+    stability_score: int
+    financial_literacy_score: int
+    responsibility_score: int
+    report_content: str
+    report_updated_at: datetime | None = None
+    score: int
+
+
+class EmployeePublic(BaseModel):
+    """Краткая карточка сотрудника (EMP-005): ФИО и логин сотрудника,
+    принявшего решение по заявке."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    login: str
+    full_name: str
+
+
+class EmployeeApplicationDetailResponse(ApplicationDetailResponse):
+    """Детальная карточка заявки сотрудника (EMP-005). То же, что видит
+    заёмщик (APP-005), плюс полный разбор скоринга, недоступный заёмщику."""
+
+    score_result: ScoreResultResponse | None = None
+    decided_by_employee: EmployeePublic | None = None

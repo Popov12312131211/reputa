@@ -1,0 +1,485 @@
+/* EMP-005: детальная карточка заявки сотрудника. Единый переиспользуемый
+   компонент для /employee/application и /employee/newApplication (по ?menu={id}).
+   CSS-переменные страниц декларируют базовую палитру, здесь — с фолбэками. */
+.appdetail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px;
+  overflow-y: auto;
+  background: rgba(25, 25, 25, 0.45);
+}
+
+.appdetail-modal__dialog {
+  width: 100%;
+  max-width: 680px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e6e3d9);
+  border-radius: var(--card-radius, 24px);
+  padding: 24px;
+}
+
+.appdetail-message {
+  padding: 32px 16px;
+  text-align: center;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  color: var(--text-muted, #6e7168);
+}
+
+.appdetail-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.appdetail-status--pending {
+  color: #b98a2e;
+  background: #f7efd9;
+}
+
+.appdetail-status--approved {
+  color: var(--accent-hover, #3e8f6d);
+  background: #dff2ea;
+}
+
+.appdetail-status--rejected {
+  color: var(--error, #c1584a);
+  background: #f4e0dd;
+}
+
+.appdetail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border, #e6e3d9);
+}
+
+.appdetail-header__main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.appdetail-header__text {
+  min-width: 0;
+}
+
+.appdetail-header__id {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  color: var(--text, #191919);
+  overflow-wrap: anywhere;
+}
+
+.appdetail-header__fio {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text-muted, #6e7168);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appdetail-header__request {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.appdetail-header__request-label {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text-muted, #6e7168);
+}
+
+.appdetail-header__request-amount {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  color: var(--text, #191919);
+}
+
+.appdetail-header__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted, #6e7168);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.appdetail-header__close:hover {
+  color: var(--text, #191919);
+  background: var(--bg-page, #f8f7f2);
+}
+
+.appdetail-section {
+  margin-top: 20px;
+}
+
+.appdetail-section__title {
+  margin: 0 0 10px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted, #6e7168);
+}
+
+.appdetail-section__title--center {
+  text-align: center;
+}
+
+/* Цель кредита — выделенный контурный контейнер с текстом заявки. */
+.appdetail-purpose {
+  border: 1px solid var(--border, #e6e3d9);
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: var(--bg-page, #f8f7f2);
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 200;
+  line-height: 20px;
+  color: var(--text, #191919);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Рекомендации системы: две колонки из бейджей. Позитивные сигналы —
+   зелёные бейджи с галочкой, факторы риска — янтарные с предупреждением. */
+.appdetail-rec {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.appdetail-rec__group {
+  min-width: 0;
+}
+
+.appdetail-rec__title {
+  margin: 0 0 8px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.appdetail-rec__title--positive {
+  color: var(--accent-hover, #3e8f6d);
+}
+
+.appdetail-rec__title--risk {
+  color: #a17817;
+}
+
+.appdetail-rec__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.appdetail-rec__badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.appdetail-rec__badge svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.appdetail-rec__badge--positive {
+  color: #2e7d5e;
+  background: #dff2ea;
+  border: 1px solid #bfe6d6;
+}
+
+.appdetail-rec__badge--risk {
+  color: #8a6a1f;
+  background: #f7efd9;
+  border: 1px solid #eddcae;
+}
+
+.appdetail-rec__empty {
+  margin: 0;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text-muted, #6e7168);
+}
+
+/* Портрет + отчёт — две колонки бок о бок выше итоговой оценки. */
+.appdetail-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.appdetail-column {
+  min-width: 0;
+}
+
+.appdetail-empty {
+  margin: 0;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text-muted, #6e7168);
+}
+
+.appdetail-portrait {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.appdetail-metric {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.appdetail-metric__label {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text, #191919);
+}
+
+.appdetail-metric__track {
+  grid-column: 1;
+  height: 8px;
+  background: var(--border, #e6e3d9);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.appdetail-metric__fill {
+  height: 100%;
+  background: var(--accent, #51b38a);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.appdetail-metric__value {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text-muted, #6e7168);
+  white-space: nowrap;
+}
+
+.appdetail-report {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.appdetail-report__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--accent-hover, #3e8f6d);
+  background: var(--card, #ffffff);
+  border: 1px solid var(--accent, #51b38a);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.appdetail-report__download:hover {
+  color: #ffffff;
+  background: var(--accent, #51b38a);
+}
+
+.appdetail-report__date {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 12px;
+  color: var(--text-muted, #6e7168);
+}
+
+/* История скачиваний отчёта: лог локальных записей, например «– 04.09.2026 ID1029391923». */
+.appdetail-history {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  background: var(--bg-page, #f8f7f2);
+  border: 1px solid var(--border, #e6e3d9);
+  border-radius: 12px;
+}
+
+.appdetail-history__title {
+  margin: 0 0 8px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted, #6e7168);
+}
+
+.appdetail-history__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.appdetail-history__item {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text, #191919);
+}
+
+.appdetail-history__empty {
+  margin: 0;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--text-muted, #6e7168);
+}
+
+.appdetail-score {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 0;
+}
+
+/* Действия: Оставить нерешённой нельзя — только Одобрить или Отклонить. */
+.appdetail-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border, #e6e3d9);
+}
+
+.appdetail-button {
+  flex: 1;
+  padding: 12px 16px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 15px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.appdetail-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.appdetail-button--reject {
+  color: var(--error, #c1584a);
+  background: #f4e0dd;
+}
+
+.appdetail-button--reject:hover:not(:disabled) {
+  background: #edcdc8;
+}
+
+.appdetail-button--approve {
+  color: #ffffff;
+  background: var(--accent, #51b38a);
+}
+
+.appdetail-button--approve:hover:not(:disabled) {
+  background: var(--accent-hover, #3e8f6d);
+}
+
+/* Блок «Решение принято»: статус + ФИО и логин сотрудника, принявшего решение. */
+.appdetail-decided {
+  margin-top: 24px;
+  padding: 12px 16px;
+  font-family: "Inter", Arial, sans-serif;
+  color: var(--text-muted, #6e7168);
+  background: var(--bg-page, #f8f7f2);
+  border: 1px solid var(--border, #e6e3d9);
+  border-radius: 10px;
+}
+
+.appdetail-decided__status {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text, #191919);
+}
+
+.appdetail-decided__employee {
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.appdetail-decided__date {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-muted, #6e7168);
+}
+
+.appdetail-error {
+  margin: 12px 0 0;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 14px;
+  color: var(--error, #c1584a);
+}
+
+@media (max-width: 640px) {
+  .appdetail-modal {
+    padding: 24px 12px;
+    align-items: center;
+  }
+
+  .appdetail-modal__dialog {
+    padding: 20px 16px;
+  }
+
+  .appdetail-rec,
+  .appdetail-columns {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .appdetail-header {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .appdetail-header__request {
+    order: 3;
+    margin-left: 0;
+    width: 100%;
+  }
+}

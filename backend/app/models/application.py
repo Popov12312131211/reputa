@@ -19,6 +19,7 @@ from app.core.constants import (
 
 if TYPE_CHECKING:
     from app.models.score_result import ScoreResult
+    from app.models.user import User
 
 
 class ApplicationStatus(str, enum.Enum):
@@ -48,8 +49,16 @@ class Application(Base):
         server_default=APPLICATION_STATUS_IN_QUEUE,
     )
     score: Mapped[int | None] = mapped_column(nullable=True)
+    decided_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    user: Mapped["User"] = relationship(back_populates="applications")
+    user: Mapped["User"] = relationship(
+        back_populates="applications", foreign_keys=[user_id]
+    )
+    decided_by_user: Mapped["User | None"] = relationship(
+        foreign_keys=[decided_by]
+    )
     score_result: Mapped["ScoreResult | None"] = relationship(back_populates="application", uselist=False)
