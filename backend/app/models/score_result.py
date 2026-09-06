@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Text, JSON, ForeignKey, DateTime, func
+from sqlalchemy import String, Text, JSON, ForeignKey, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.constants import APPLICATION_ID_LENGTH
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -14,8 +15,10 @@ class ScoreResult(Base):
     __tablename__ = "score_results"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    application_id: Mapped[int] = mapped_column(
-        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    application_id: Mapped[str] = mapped_column(
+        String(APPLICATION_ID_LENGTH),
+        ForeignKey("applications.id", ondelete="CASCADE"),
+        index=True,
     )
     positive_signals: Mapped[list[str]] = mapped_column(JSON, default=list)
     risk_factors: Mapped[list[str]] = mapped_column(JSON, default=list)

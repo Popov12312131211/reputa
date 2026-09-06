@@ -41,7 +41,18 @@ export default function Sidebar() {
   const items = MENU[role] || []
 
   useEffect(() => {
+    // Во время перетаскивания запрещаем выделение текста страницы, чтобы
+    // drag по границе сайдбара не выглядел как обычное выделение мышью (BUG-001).
+    const disableUserSelect = () => {
+      document.body.style.userSelect = 'none'
+      document.body.style.webkitUserSelect = 'none'
+    }
+    const enableUserSelect = () => {
+      document.body.style.userSelect = ''
+      document.body.style.webkitUserSelect = ''
+    }
     const onMouseMove = (e) => {
+      e.preventDefault()
       // Сайдбар начинается в x = 0, поэтому ширина = координате курсора.
       const next = Math.max(8, Math.min(Math.round(e.clientX), Math.round(window.innerWidth * MAX_WIDTH_RATIO)))
       widthRef.current = next
@@ -51,13 +62,16 @@ export default function Sidebar() {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
       document.body.style.cursor = ''
+      enableUserSelect()
       // Доскальзывание к ближайшему стабильному состоянию по порогу.
       setExpanded(widthRef.current >= COLLAPSE_THRESHOLD)
       setDragging(false)
     }
-    const onResizeStart = () => {
+    const onResizeStart = (e) => {
+      e.preventDefault()
       setDragging(true)
       document.body.style.cursor = 'col-resize'
+      disableUserSelect()
       document.addEventListener('mousemove', onMouseMove)
       document.addEventListener('mouseup', onMouseUp)
     }
@@ -68,6 +82,7 @@ export default function Sidebar() {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
       document.body.style.cursor = ''
+      enableUserSelect()
     }
   }, [])
 

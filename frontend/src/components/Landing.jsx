@@ -1,13 +1,39 @@
 import { useTranslation } from 'react-i18next'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './Landing.css'
 
 export default function Landing() {
   const { t } = useTranslation()
 
+  // Хедер прилипает к верху экрана, как только страница прокручена вниз
+  // от Hero-секции; в самом верху он скрыт и появляется по наведению на
+  // верхнюю триггер-зону экрана (см. Landing.css -> .landing-trigger).
+  const [atTop, setAtTop] = useState(true)
+  const [peekVisible, setPeekVisible] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setAtTop(window.scrollY <= 0)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const headerShown = !atTop || peekVisible
+
   return (
     <div className="page">
-      <header className="header">
+      <div
+        className="landing-trigger"
+        onMouseEnter={() => setPeekVisible(true)}
+        onMouseLeave={() => setPeekVisible(false)}
+        aria-hidden="true"
+      />
+      <header
+        className={`header ${headerShown ? '' : 'header--hidden'}`}
+        onMouseEnter={() => setPeekVisible(true)}
+        onMouseLeave={() => setPeekVisible(false)}
+      >
         <span className="logo logo--header">{t('landing.logo')}</span>
         <nav className="links">
           <Link className="link" to="/login">{t('landing.login')}</Link>

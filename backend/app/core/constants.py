@@ -29,6 +29,10 @@ APPLICATION_STATUS_MAX_LENGTH = 32
 # Лимиты полей заявки
 AMOUNT_PRECISION = 12
 AMOUNT_SCALE = 2
+
+# ID заявки (INFRA-004): первые 10-12 символов sha256-хеша от случайных данных.
+# Не автоинкремент и не числовой; длина — в границах допустимого диапазона 10-12.
+APPLICATION_ID_LENGTH = 12
 PURPOSE_MAX_LENGTH = 1024
 TELEGRAM_CHANNEL_MAX_LENGTH = 255
 

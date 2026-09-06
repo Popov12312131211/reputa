@@ -1,4 +1,6 @@
 import enum
+import hashlib
+import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -10,6 +12,7 @@ from app.db.base import Base
 from app.core.constants import (
     AMOUNT_PRECISION,
     AMOUNT_SCALE,
+    APPLICATION_ID_LENGTH,
     PURPOSE_MAX_LENGTH,
     TELEGRAM_CHANNEL_MAX_LENGTH,
     TELEGRAM_MAX_LENGTH,
@@ -20,6 +23,13 @@ from app.core.constants import (
 if TYPE_CHECKING:
     from app.models.score_result import ScoreResult
     from app.models.user import User
+
+
+def generate_application_id() -> str:
+    """Строковый ID заявки (INFRA-004): первые 10-12 символов sha256-хеша от
+    случайного uuid4. Не автоинкремент и не предсказуемая последовательность —
+    каждый ID случаен и не зависит от предыдущих/количества записей."""
+    return hashlib.sha256(uuid.uuid4().hex.encode("ascii")).hexdigest()[:APPLICATION_ID_LENGTH]
 
 
 class ApplicationStatus(str, enum.Enum):
@@ -33,7 +43,9 @@ class ApplicationStatus(str, enum.Enum):
 class Application(Base):
     __tablename__ = "applications"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[str] = mapped_column(
+        String(APPLICATION_ID_LENGTH), primary_key=True, default=generate_application_id
+    )
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )

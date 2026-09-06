@@ -87,8 +87,8 @@ class TestEmployeeApplicationList:
             role=UserRole.USER.value,
         )
         rows = [
-            _make_application(app_id=10, user=borrower, score=84),
-            _make_application(app_id=11, user=borrower),
+            _make_application(app_id="a1b2c3d4e5f6", user=borrower, score=84),
+            _make_application(app_id="b2c3d4e5f607", user=borrower),
         ]
         self._set_db(_FakeDb(rows))
         self.client.cookies.set("access_token", _token())
@@ -97,7 +97,7 @@ class TestEmployeeApplicationList:
         assert resp.status_code == 200
         body = resp.json()
         assert len(body) == 2
-        assert body[0]["id"] == 10
+        assert body[0]["id"] == "a1b2c3d4e5f6"
         assert body[0]["full_name"] == "Петрова Анна Сергеевна"
         assert body[0]["amount"] == "1000.00"
         assert body[0]["status"] == "in_queue"
@@ -180,7 +180,7 @@ class TestEmployeeApplicationDetail:
         # скоринга (сигналы, портрет, отчёт), которого нет у заёмщика.
         borrower = self._make_borrower()
         score_result = ScoreResult(
-            application_id=10,
+            application_id="a1b2c3d4e5f6",
             positive_signals=["Регулярные поступления"],
             risk_factors=["Нерегулярный доход"],
             stability_score=8,
@@ -189,16 +189,16 @@ class TestEmployeeApplicationDetail:
             report_content="Отчёт для кредитного комитета по заявке.",
             score=61,
         )
-        rows = [self._make_application(app_id=10, user=borrower, score=61, score_result=score_result)]
+        rows = [self._make_application(app_id="a1b2c3d4e5f6", user=borrower, score=61, score_result=score_result)]
         self._set_db(_FakeDetailDb(rows))
         self._set_user()
         resp = self.client.get(
-            "/employee/applications/10",
+            "/employee/applications/a1b2c3d4e5f6",
             cookies={"access_token": _token()},
         )
         assert resp.status_code == 200
         body = resp.json()
-        assert body["id"] == 10
+        assert body["id"] == "a1b2c3d4e5f6"
         assert body["full_name"] == "Петрова Анна Сергеевна"
         assert body["score"] == 61
         assert body["score_result"]["positive_signals"] == ["Регулярные поступления"]
@@ -212,16 +212,16 @@ class TestEmployeeApplicationDetail:
     def test_returns_detail_without_score_result(self):
         # Пока скоринг не рассчитан (STMT-002/TG-003), score_result приходит null.
         borrower = self._make_borrower()
-        rows = [self._make_application(app_id=11, user=borrower, score=None)]
+        rows = [self._make_application(app_id="b2c3d4e5f607", user=borrower, score=None)]
         self._set_db(_FakeDetailDb(rows))
         self._set_user()
         resp = self.client.get(
-            "/employee/applications/11",
+            "/employee/applications/b2c3d4e5f607",
             cookies={"access_token": _token()},
         )
         assert resp.status_code == 200
         body = resp.json()
-        assert body["id"] == 11
+        assert body["id"] == "b2c3d4e5f607"
         assert body["score_result"] is None
 
     def _make_deciding_employee(self):
@@ -239,12 +239,12 @@ class TestEmployeeApplicationDetail:
     def test_returns_decided_by_employee(self):
         # EMP-005: после решения заявки карточка показывает ФИО и логин
         # сотрудника, принявшего решение.
-        app = self._make_application(app_id=12, user=self._make_borrower(), score=None)
+        app = self._make_application(app_id="c3d4e5f6a718", user=self._make_borrower(), score=None)
         app.decided_by_user = self._make_deciding_employee()
         self._set_db(_FakeDetailDb([app]))
         self._set_user()
         resp = self.client.get(
-            "/employee/applications/12",
+            "/employee/applications/c3d4e5f6a718",
             cookies={"access_token": _token()},
         )
         assert resp.status_code == 200
@@ -256,11 +256,11 @@ class TestEmployeeApplicationDetail:
     def test_decided_by_employee_is_null_before_decision(self):
         # Пока решение не принято (статус in_queue), решивший сотрудник не задан.
         borrower = self._make_borrower()
-        rows = [self._make_application(app_id=13, user=borrower, score=None)]
+        rows = [self._make_application(app_id="d4e5f6a7898a", user=borrower, score=None)]
         self._set_db(_FakeDetailDb(rows))
         self._set_user()
         resp = self.client.get(
-            "/employee/applications/13",
+            "/employee/applications/d4e5f6a7898a",
             cookies={"access_token": _token()},
         )
         assert resp.status_code == 200
@@ -270,7 +270,7 @@ class TestEmployeeApplicationDetail:
         self._set_db(_FakeDetailDb([]))
         self._set_user()
         resp = self.client.get(
-            "/employee/applications/999",
+            "/employee/applications/zzzz999999",
             cookies={"access_token": _token()},
         )
         assert resp.status_code == 404
@@ -280,12 +280,12 @@ class TestEmployeeApplicationDetail:
         # Пользовательская роль не допускается на /employee/* — 401 от middleware.
         self._set_db(_FakeDetailDb([]))
         resp = self.client.get(
-            "/employee/applications/10",
+            "/employee/applications/a1b2c3d4e5f6",
             cookies={"access_token": _token(role=UserRole.USER.value)},
         )
         assert resp.status_code == 401
 
     def test_without_cookie_returns_401(self):
         self._set_db(_FakeDetailDb([]))
-        resp = self.client.get("/employee/applications/10")
+        resp = self.client.get("/employee/applications/a1b2c3d4e5f6")
         assert resp.status_code == 401

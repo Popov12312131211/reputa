@@ -48,7 +48,7 @@ def list_all_applications(
 
 @router.get("/applications/{application_id}", response_model=EmployeeApplicationDetailResponse)
 def get_application_detail(
-    application_id: int,
+    application_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

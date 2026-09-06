@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from app.main import app
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.models.application import Application
+from app.models.application import Application, generate_application_id
 from app.models.user import User, UserRole
 from app.schemas.application import ApplicationCreate
 from app.services.auth import create_access_token
@@ -61,12 +61,12 @@ def _mock_db(fail_commit=False):
         def commit(self):
             if self._fail_commit:
                 raise IntegrityError(
-                    "INSERT INTO applications", {"id": 1}, Exception("UNIQUE")
+                    "INSERT INTO applications", {"id": "9f2a1c4e"}, Exception("UNIQUE")
                 )
             self.committed = True
             for obj in self.added:
                 if getattr(obj, "id", None) is None:
-                    obj.id = 1
+                    obj.id = generate_application_id()
 
         def rollback(self):
             self.rolled_back = True
@@ -92,7 +92,7 @@ def _current_user():
 
 def _application(status=APPLICATION_STATUS_IN_QUEUE):
     return Application(
-        id=10,
+        id="a1b2c3d4e5f6",
         user_id=1,
         amount=Decimal("50000.00"),
         purpose="Ремонт квартиры",
@@ -162,7 +162,9 @@ class TestCreateApplicationEndpoint:
         resp = self._post(db)
         assert resp.status_code == 201
         body = resp.json()
-        assert body["id"] == 1
+        # INFRA-004: id — случайная строка из 10-12 символов (sha256-хеш), не число.
+        assert isinstance(body["id"], str)
+        assert 10 <= len(body["id"]) <= 12
         assert body["user_id"] == 1
         assert body["amount"] == "50000.00"
         assert body["purpose"] == "Ремонт квартиры"
@@ -431,7 +433,7 @@ class TestApplicationDecisionEndpoint:
         application = _application()
         db = _DecisionDb(application)
         self._set_dependencies(db)
-        response = self.client.post("/applications/10/decision", json={"decision": "approve"})
+        response = self.client.post("/applications/a1b2c3d4e5f6/decision", json={"decision": "approve"})
         assert response.status_code == 200
         assert response.json()["status"] == APPLICATION_STATUS_EMPLOYEE_APPROVED
         assert application.status == APPLICATION_STATUS_EMPLOYEE_APPROVED
@@ -443,7 +445,7 @@ class TestApplicationDecisionEndpoint:
         application = _application()
         db = _DecisionDb(application)
         self._set_dependencies(db)
-        response = self.client.post("/applications/10/decision", json={"decision": "reject"})
+        response = self.client.post("/applications/a1b2c3d4e5f6/decision", json={"decision": "reject"})
         assert response.status_code == 200
         assert response.json()["status"] == APPLICATION_STATUS_EMPLOYEE_REJECTED
         assert application.decided_by == 1
@@ -451,27 +453,27 @@ class TestApplicationDecisionEndpoint:
     def test_user_cannot_decide_application(self):
         db = _DecisionDb(_application())
         self._set_dependencies(db, _current_user())
-        response = self.client.post("/applications/10/decision", json={"decision": "approve"})
+        response = self.client.post("/applications/a1b2c3d4e5f6/decision", json={"decision": "approve"})
         assert response.status_code == 403
         assert db.committed is False
 
     def test_decision_for_missing_application_returns_404(self):
         db = _DecisionDb()
         self._set_dependencies(db)
-        response = self.client.post("/applications/10/decision", json={"decision": "approve"})
+        response = self.client.post("/applications/a1b2c3d4e5f6/decision", json={"decision": "approve"})
         assert response.status_code == 404
         assert db.committed is False
 
     def test_decision_for_already_decided_application_returns_409(self):
         db = _DecisionDb(_application(APPLICATION_STATUS_EMPLOYEE_APPROVED))
         self._set_dependencies(db)
-        response = self.client.post("/applications/10/decision", json={"decision": "reject"})
+        response = self.client.post("/applications/a1b2c3d4e5f6/decision", json={"decision": "reject"})
         assert response.status_code == 409
         assert db.committed is False
 
     def test_invalid_decision_returns_422(self):
         db = _DecisionDb(_application())
         self._set_dependencies(db)
-        response = self.client.post("/applications/10/decision", json={"decision": "maybe"})
+        response = self.client.post("/applications/a1b2c3d4e5f6/decision", json={"decision": "maybe"})
         assert response.status_code == 422
         assert db.committed is False

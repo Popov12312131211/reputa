@@ -87,7 +87,7 @@ async def create_application(
 
 @router.post("/{application_id}/decision", response_model=ApplicationResponse)
 def decide_application(
-    application_id: int,
+    application_id: str,
     body: ApplicationDecisionRequest,
     db: Session = Depends(get_db),
     current_employee: User = Depends(get_current_employee),
