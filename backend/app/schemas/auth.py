@@ -1,8 +1,10 @@
 from datetime import date
+import re
 
 from pydantic import BaseModel, field_validator
 
 from app.core.constants import (
+    EMPLOYEE_IDENTIFIER_PATTERN,
     FULL_NAME_MAX_LENGTH,
     LOGIN_MAX_LENGTH,
     USER_MAX_AGE_YEARS,
@@ -15,7 +17,14 @@ from app.schemas.validators import (
 )
 
 
-class RegisterRequest(BaseModel):
+class RegisterRequestBase(BaseModel):
+    """Общие поля и валидация для регистрации (обычной и сотрудника).
+
+    Отдельная база нужна, чтобы эндпоинт сотрудника (AUTH-010) переиспользовал
+    одинаковую валидацию ФИО/даты/логина/пароля/телефона/телеграма, не дублируя
+    код, и добавлял только своё поле идентификатора.
+    """
+
     full_name: str
     birth_date: date
     login: str
@@ -64,6 +73,29 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_telegram_field(cls, v: str) -> str:
         return validate_telegram(v)
+
+
+class RegisterRequest(RegisterRequestBase):
+    pass
+
+
+class EmployeeRegisterRequest(RegisterRequestBase):
+    """Регистрация сотрудника (AUTH-010): поля обычной регистрации + идентификатор.
+
+    Идентификатор — часть проверки принадлежности к команде. Для MVP достаточно
+    проверки формата (буква + 3 цифры + "room19"); сам идентификатор не хранится
+    и не является секретом доступа.
+    """
+
+    identifier: str
+
+    @field_validator("identifier")
+    @classmethod
+    def validate_identifier(cls, v: str) -> str:
+        v = _strip_required(v, "Идентификатор не может быть пустым")
+        if not re.fullmatch(EMPLOYEE_IDENTIFIER_PATTERN, v):
+            raise ValueError("Некорректный формат идентификатора")
+        return v
 
 
 class RegisterResponse(BaseModel):

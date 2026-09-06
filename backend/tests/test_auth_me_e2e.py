@@ -133,3 +133,45 @@ class TestAuthMeEndToEnd:
         r = client.get("/user/applications")
         assert r.status_code == 401
         assert r.json()["detail"] == "Не авторизован"
+
+    def test_employee_register_login_flow(self, client):
+        # AUTH-010: регистрация сотрудника с идентификатором + вход через
+        # /auth/login/employee (обычный /login сотруднику запрещён — AUTH-009).
+        emp_payload = {
+            "full_name": "Мария Орлова",
+            "birth_date": "1992-03-03",
+            "login": "e2e_emp_reg",
+            "password": "Abcdef3!",
+            "phone": "+79990000005",
+            "telegram": "@e2e_emp_reg",
+            "identifier": "A123room19",
+        }
+        r = client.post("/auth/register/employee", json=emp_payload)
+        assert r.status_code == 201
+        assert r.json()["role"] == UserRole.EMPLOYEE.value
+
+        # Роль employee подтверждается на реальном входе и на /auth/me.
+        r = client.post(
+            "/auth/login/employee",
+            json={"login": "e2e_emp_reg", "code": STAFF_LOGIN_CODE, "password": "Abcdef3!"},
+        )
+        assert r.status_code == 200
+        assert client.cookies.get("access_token")
+
+        r = client.get("/auth/me")
+        assert r.status_code == 200
+        assert r.json()["role"] == UserRole.EMPLOYEE.value
+
+    def test_employee_register_bad_identifier_rejected(self, client):
+        # AUTH-010: неверный формат идентификатора не создаёт пользователя.
+        bad_payload = {
+            "full_name": "Мария Орлова",
+            "birth_date": "1992-03-03",
+            "login": "e2e_emp_bad",
+            "password": "Abcdef3!",
+            "phone": "+79990000005",
+            "telegram": "@e2e_emp_bad",
+            "identifier": "badroom19",
+        }
+        r = client.post("/auth/register/employee", json=bad_payload)
+        assert r.status_code == 422

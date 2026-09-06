@@ -16,6 +16,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.auth import (
+    EmployeeRegisterRequest,
     MeResponse,
     RegisterRequest,
     RegisterResponse,
@@ -57,28 +58,27 @@ def _set_auth_cookie(response: Response, user: User) -> None:
     )
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-def register(body: RegisterRequest, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.login == body.login).first()
+def _create_user(db: Session, *, full_name, birth_date, login, password, phone, telegram, role) -> User:
+    """Создаёт пользователя с заданной ролью.
+
+    Общий код для обычной регистрации (AUTH-001) и регистрации сотрудника
+    (AUTH-010): pre-check уникальности логина (гонка ловится IntegrityError),
+    хеширование пароля, commit.
+    """
+    existing = db.query(User).filter(User.login == login).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=MSG_USER_ALREADY_EXISTS,
         )
 
-    # Первый зарегистрированный пользователь в пустой БД становится сотрудником:
-    # так сотрудники заводятся на демо без отдельного админ-интерфейса.
-    role = UserRole.USER.value
-    if db.query(User).count() == 0:
-        role = UserRole.EMPLOYEE.value
-
     user = User(
-        full_name=body.full_name,
-        birth_date=body.birth_date,
-        login=body.login,
-        password_hash=hash_password(body.password),
-        phone=body.phone,
-        telegram=body.telegram,
+        full_name=full_name,
+        birth_date=birth_date,
+        login=login,
+        password_hash=hash_password(password),
+        phone=phone,
+        telegram=telegram,
         role=role,
     )
     # Гонка двух параллельных запросов с одним логином ловится здесь:
@@ -95,6 +95,46 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
         ) from exc
 
     return user
+
+
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+def register(body: RegisterRequest, db: Session = Depends(get_db)):
+    # Первый зарегистрированный пользователь в пустой БД становится сотрудником:
+    # так сотрудники заводятся на демо без отдельного админ-интерфейса.
+    role = UserRole.USER.value
+    if db.query(User).count() == 0:
+        role = UserRole.EMPLOYEE.value
+
+    return _create_user(
+        db,
+        full_name=body.full_name,
+        birth_date=body.birth_date,
+        login=body.login,
+        password=body.password,
+        phone=body.phone,
+        telegram=body.telegram,
+        role=role,
+    )
+
+
+@router.post("/register/employee", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+def register_employee(body: EmployeeRegisterRequest, db: Session = Depends(get_db)):
+    """Регистрация сотрудника (AUTH-010).
+
+    Роль employee задаётся явно, независимо от количества пользователей в БД
+    (bootstrap-правило обычной регистрации сюда не применяется). Идентификатор
+    проверяется по формату в схеме и в БД не сохраняется.
+    """
+    return _create_user(
+        db,
+        full_name=body.full_name,
+        birth_date=body.birth_date,
+        login=body.login,
+        password=body.password,
+        phone=body.phone,
+        telegram=body.telegram,
+        role=UserRole.EMPLOYEE.value,
+    )
 
 
 @router.get("/profile", response_model=ProfileResponse)
